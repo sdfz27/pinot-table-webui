@@ -49,23 +49,27 @@ export function SchemaStep() {
   return (
     <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
       <StepIndicator currentStep={currentStep} />
-      <div className="max-w-3xl mx-auto rounded-lg bg-white p-6 shadow-md">
-        <h2 className="mb-4 text-lg font-semibold">Schema Columns</h2>
-        <div className="space-y-4">
-          <ColumnList
-            columns={(formColumns?.length ? formColumns : []) as ColumnData[]}
-            onChange={handleColumnsChange}
-          />
-          {errors.columns && (
-            <p className="text-sm text-red-600">{errors.columns.message}</p>
-          )}
+      <div className="max-w-3xl mx-auto space-y-4">
+        <div className="rounded-lg bg-white p-6 shadow-md">
+          <h2 className="mb-4 text-lg font-semibold">Schema Columns</h2>
+          <div className="space-y-4">
+            <ColumnList
+              columns={(formColumns?.length ? formColumns : []) as ColumnData[]}
+              onChange={handleColumnsChange}
+            />
+            {errors.columns && (
+              <p className="text-sm text-red-600">{errors.columns.message}</p>
+            )}
+          </div>
         </div>
-        <NavigationButtons
-          currentStep={currentStep}
-          onBack={handleBack}
-          onNext={handleNext}
-          isNextDisabled={false}
-        />
+        <footer className="flex justify-between">
+          <NavigationButtons
+            currentStep={currentStep}
+            onBack={handleBack}
+            onNext={handleNext}
+            isNextDisabled={false}
+          />
+        </footer>
       </div>
     </form>
   );

@@ -51,7 +51,7 @@ export function ReviewStep() {
             </div>
           </div>
         </div>
-        <div className="flex justify-between items-center pt-4">
+        <footer className="flex justify-between items-center pt-4">
           <NavigationButtons
             currentStep={currentStep}
             onBack={handleBack}
@@ -65,7 +65,7 @@ export function ReviewStep() {
           >
             Start Over
           </button>
-        </div>
+        </footer>
       </div>
     </div>
   );

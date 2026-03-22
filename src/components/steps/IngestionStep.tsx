@@ -86,8 +86,9 @@ export function IngestionStep() {
   return (
     <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
       <StepIndicator currentStep={currentStep} />
-      <div className="max-w-3xl mx-auto rounded-lg bg-white p-6 shadow-md">
-        <h2 className="mb-4 text-lg font-semibold">Ingestion & Special</h2>
+      <div className="max-w-3xl mx-auto space-y-4">
+        <div className="rounded-lg bg-white p-6 shadow-md">
+          <h2 className="mb-4 text-lg font-semibold">Ingestion & Special</h2>
         <div className="space-y-4">
           <div>
             <span className="block text-sm font-medium text-gray-700">Ingestion Type</span>
@@ -200,12 +201,15 @@ export function IngestionStep() {
             </div>
           )}
         </div>
-        <NavigationButtons
-          currentStep={currentStep}
-          onBack={handleBack}
-          onNext={handleNext}
-          isNextDisabled={false}
-        />
+        </div>
+        <footer className="flex justify-between">
+          <NavigationButtons
+            currentStep={currentStep}
+            onBack={handleBack}
+            onNext={handleNext}
+            isNextDisabled={false}
+          />
+        </footer>
       </div>
     </form>
   );
