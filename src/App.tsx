@@ -1,6 +1,5 @@
 import { Refine } from "@refinedev/core";
-import routerProvider from "@refinedev/react-router-v6";
-import { Routes, Route } from "react-router-dom";
+import routerProvider, { RefineRoutes } from "@refinedev/react-router-v6";
 import { dataProvider } from "./providers/dataProvider";
 import { WizardPage } from "./pages/WizardPage";
 
@@ -11,9 +10,7 @@ function App() {
       routerProvider={routerProvider}
       resources={[{ name: "wizard", list: { path: "/", component: WizardPage } }]}
     >
-      <Routes>
-        <Route path="/" element={<WizardPage />} />
-      </Routes>
+      <RefineRoutes />
     </Refine>
   );
 }
