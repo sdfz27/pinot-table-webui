@@ -178,7 +178,7 @@ interface ComplexFieldSpec {
 }
 
 interface PinotSchema {
-  schemaName: string;
+  schemaName: string;  // Defaults to tableName when generated
   enableColumnBasedNullHandling?: boolean;
   dimensionFieldSpecs: DimensionFieldSpec[];
   metricFieldSpecs: MetricFieldSpec[];
@@ -218,7 +218,21 @@ interface BatchIngestionConfig {
 
 interface StreamIngestionConfig {
   streamType: 'kafka' | 'kinesis' | 'pulsar';
-  streamConfigMaps: Record<string, string>[];
+  topicName: string;
+  bootstrapServers?: string;      // Kafka: broker URLs (e.g., "broker1:9092,broker2:9092")
+  region?: string;                // Kinesis: AWS region
+  streamName?: string;            // Kinesis/Pulsar: stream name
+  serviceUrl?: string;            // Pulsar: service URL
+  authenticationType?: 'NONE' | 'SASL' | 'SSL' | 'IAM';
+  authenticationConfig?: {
+    saslMechanism?: 'PLAIN' | 'SCRAM-SHA-256' | 'SCRAM-SHA-512';
+    saslUsername?: string;
+    saslPassword?: string;
+    sslTruststorePath?: string;
+    sslKeystorePath?: string;
+    sslKeystorePassword?: string;
+  };
+  consumerProperties?: Record<string, string>;  // Additional consumer config as key-value pairs
 }
 
 interface UpsertConfig {
@@ -334,13 +348,33 @@ interface WizardState {
 
 ### Step 4: Ingestion & Special
 
-| Section | Fields |
-|---------|--------|
-| Ingestion Type | NONE / BATCH / STREAM |
-| Batch Config | Segment Ingestion Type, Frequency |
-| Stream Config | Stream Type, Topic Name |
-| Upsert | Enable toggle, Mode, Key Columns |
-| Dedup | Enable toggle, Hash Function |
+**Note:** Available options depend on table type (set in Step 1):
+- **OFFLINE tables**: Batch ingestion only (STREAM option disabled)
+- **REALTIME tables**: Stream ingestion only (BATCH option disabled), Upsert and Dedup available
+
+| Section | Fields | Availability |
+|---------|--------|--------------|
+| Ingestion Type | NONE / BATCH / STREAM | BATCH: OFFLINE only; STREAM: REALTIME only |
+| Batch Config | Segment Ingestion Type, Frequency | OFFLINE only |
+| Stream Config | Stream Type, Topic Name, Bootstrap Servers, Authentication, Consumer Properties | REALTIME only |
+| Upsert | Enable toggle, Mode, Key Columns | REALTIME only |
+| Dedup | Enable toggle, Hash Function | REALTIME only |
+
+**Stream Config Fields:**
+
+| Field | Type | Notes |
+|-------|------|-------|
+| Stream Type | select | kafka, kinesis, pulsar |
+| Topic Name | text | Required |
+| Bootstrap Servers | text | Kafka: broker URLs (comma-separated) |
+| Region | text | Kinesis: AWS region |
+| Stream Name | text | Kinesis/Pulsar |
+| Service URL | text | Pulsar: service URL |
+| Authentication Type | select | NONE, SASL, SSL, IAM |
+| SASL Mechanism | select | PLAIN, SCRAM-SHA-256, SCRAM-SHA-512 |
+| SASL Username/Password | text | SASL auth |
+| SSL Truststore/Keystore | text | SSL auth |
+| Consumer Properties | key-value pairs | Additional consumer config |
 
 ### Step 5: Review & Export
 
@@ -382,6 +416,12 @@ export const indexingStepSchema = z.object({
 | Ingestion | Required fields based on selected options |
 
 ## Export Functionality
+
+### Schema Name
+
+The `schemaName` in the generated schema JSON **defaults to the table name** (without the OFFLINE/REALTIME suffix). Users do not configure this separately.
+
+### Export Utilities
 
 ```typescript
 export function copyToClipboard(text: string): Promise<void> {
@@ -454,3 +494,5 @@ const errorClass = "text-red-600 text-sm mt-1";
 | Copy + Download options | Flexibility for different workflows |
 | Create only (no import) | Simpler codebase, clear use case |
 | Basic validation | Balance between strictness and usability |
+| Schema name = table name | Pinot convention; schema name matches table name without type suffix |
+| Table-type-specific options | BATCH for OFFLINE, STREAM/Upsert/Dedup for REALTIME only |
