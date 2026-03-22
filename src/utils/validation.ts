@@ -132,3 +132,43 @@ export const schemaStepSchema = z
     },
     { message: "Column names must be unique", path: ["columns"] }
   );
+
+export const indexingStepSchema = z.object({
+  replication: z.number().min(1, "Replication must be at least 1"),
+});
+
+/** Creates ingestion step schema with tableType context for STREAM config validation. */
+export function createIngestionStepSchema(
+  tableType: "OFFLINE" | "REALTIME"
+) {
+  return z
+    .object({
+      ingestionType: z.enum(["NONE", "BATCH", "STREAM"]),
+      streamConfig: z
+        .object({
+          topicName: z.string().optional(),
+          bootstrapServers: z.string().optional(),
+        })
+        .optional(),
+      batchConfig: z.object({}).passthrough().optional(),
+    })
+    .superRefine((data, ctx) => {
+      if (data.ingestionType === "STREAM" && tableType === "REALTIME") {
+        const sc = data.streamConfig;
+        if (!sc?.topicName?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Topic name is required for stream ingestion",
+            path: ["streamConfig", "topicName"],
+          });
+        }
+        if (!sc?.bootstrapServers?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Bootstrap servers are required for stream ingestion",
+            path: ["streamConfig", "bootstrapServers"],
+          });
+        }
+      }
+    });
+}

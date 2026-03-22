@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { basicInfoSchema, columnSchema, schemaStepSchema } from "./validation";
+import {
+  basicInfoSchema,
+  columnSchema,
+  schemaStepSchema,
+  indexingStepSchema,
+  createIngestionStepSchema,
+} from "./validation";
 
 describe("basicInfoSchema", () => {
   it("rejects empty table name", () => {
@@ -131,6 +137,50 @@ describe("schemaStepSchema", () => {
   it("accepts valid columns with unique names", () => {
     const r = schemaStepSchema.safeParse({
       columns: [validColumn, { ...validColumn, id: "2", name: "col2" }],
+    });
+    expect(r.success).toBe(true);
+  });
+});
+
+describe("indexingStepSchema", () => {
+  it("rejects replication 0", () => {
+    const r = indexingStepSchema.safeParse({ replication: 0 });
+    expect(r.success).toBe(false);
+  });
+
+  it("accepts replication 1", () => {
+    const r = indexingStepSchema.safeParse({ replication: 1 });
+    expect(r.success).toBe(true);
+  });
+});
+
+describe("createIngestionStepSchema", () => {
+  it("requires topicName when ingestionType STREAM and tableType REALTIME", () => {
+    const schema = createIngestionStepSchema("REALTIME");
+    const r = schema.safeParse({
+      ingestionType: "STREAM",
+      streamConfig: { bootstrapServers: "broker:9092" },
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("requires bootstrapServers when ingestionType STREAM and tableType REALTIME", () => {
+    const schema = createIngestionStepSchema("REALTIME");
+    const r = schema.safeParse({
+      ingestionType: "STREAM",
+      streamConfig: { topicName: "my-topic" },
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("accepts valid stream config when ingestionType STREAM and tableType REALTIME", () => {
+    const schema = createIngestionStepSchema("REALTIME");
+    const r = schema.safeParse({
+      ingestionType: "STREAM",
+      streamConfig: {
+        topicName: "my-topic",
+        bootstrapServers: "broker1:9092,broker2:9092",
+      },
     });
     expect(r.success).toBe(true);
   });
