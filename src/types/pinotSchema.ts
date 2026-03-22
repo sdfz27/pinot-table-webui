@@ -14,9 +14,12 @@ export type DataType =
 
 export type FieldType = "DIMENSION" | "METRIC" | "DATETIME" | "COMPLEX";
 
+/** Dimension fields: INT, LONG, FLOAT, DOUBLE, BOOLEAN, TIMESTAMP, STRING, BYTES, JSON (no BIG_DECIMAL) */
+export type DimensionDataType = Exclude<DataType, "BIG_DECIMAL">;
+
 export interface DimensionFieldSpec {
   name: string;
-  dataType: DataType;
+  dataType: DimensionDataType;
   defaultNullValue?: string | number;
   singleValueField?: boolean;
 }
