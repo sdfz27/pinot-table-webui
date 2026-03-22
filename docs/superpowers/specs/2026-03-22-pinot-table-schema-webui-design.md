@@ -18,6 +18,7 @@ A client-side React application that provides a step-by-step wizard for generati
 
 - Import/edit existing configurations
 - Cover all Pinot configuration options (only essential + ingestion + upsert/dedup)
+- Stream sources other than Kafka (Kinesis, Pulsar) - may be added later
 - Backend integration or API connections
 - User authentication or data persistence beyond session
 
@@ -29,9 +30,9 @@ A client-side React application that provides a step-by-step wizard for generati
   - Table name and type (OFFLINE/REALTIME)
   - Segments config (time column, replication, retention)
   - Field configs for indexing
-  - Ingestion config (batch and stream)
-  - Upsert config
-  - Dedup config
+  - Ingestion config (batch for OFFLINE, Kafka stream for REALTIME)
+  - Upsert config (REALTIME only)
+  - Dedup config (REALTIME only)
 
 - **Schema Configuration:**
   - Dimension field specs
@@ -217,13 +218,10 @@ interface BatchIngestionConfig {
 }
 
 interface StreamIngestionConfig {
-  streamType: 'kafka' | 'kinesis' | 'pulsar';
+  streamType: 'kafka';
   topicName: string;
-  bootstrapServers?: string;      // Kafka: broker URLs (e.g., "broker1:9092,broker2:9092")
-  region?: string;                // Kinesis: AWS region
-  streamName?: string;            // Kinesis/Pulsar: stream name
-  serviceUrl?: string;            // Pulsar: service URL
-  authenticationType?: 'NONE' | 'SASL' | 'SSL' | 'IAM';
+  bootstrapServers: string;       // Broker URLs (e.g., "broker1:9092,broker2:9092")
+  authenticationType?: 'NONE' | 'SASL' | 'SSL';
   authenticationConfig?: {
     saslMechanism?: 'PLAIN' | 'SCRAM-SHA-256' | 'SCRAM-SHA-512';
     saslUsername?: string;
@@ -360,21 +358,20 @@ interface WizardState {
 | Upsert | Enable toggle, Mode, Key Columns | REALTIME only |
 | Dedup | Enable toggle, Hash Function | REALTIME only |
 
-**Stream Config Fields:**
+**Stream Config Fields (Kafka only in initial version):**
 
 | Field | Type | Notes |
 |-------|------|-------|
-| Stream Type | select | kafka, kinesis, pulsar |
 | Topic Name | text | Required |
-| Bootstrap Servers | text | Kafka: broker URLs (comma-separated) |
-| Region | text | Kinesis: AWS region |
-| Stream Name | text | Kinesis/Pulsar |
-| Service URL | text | Pulsar: service URL |
-| Authentication Type | select | NONE, SASL, SSL, IAM |
-| SASL Mechanism | select | PLAIN, SCRAM-SHA-256, SCRAM-SHA-512 |
-| SASL Username/Password | text | SASL auth |
-| SSL Truststore/Keystore | text | SSL auth |
-| Consumer Properties | key-value pairs | Additional consumer config |
+| Bootstrap Servers | text | Required; broker URLs (comma-separated, e.g., "broker1:9092,broker2:9092") |
+| Authentication Type | select | NONE, SASL, SSL |
+| SASL Mechanism | select | PLAIN, SCRAM-SHA-256, SCRAM-SHA-512 (shown when SASL selected) |
+| SASL Username | text | Shown when SASL selected |
+| SASL Password | text | Shown when SASL selected |
+| SSL Truststore Path | text | Shown when SSL selected |
+| SSL Keystore Path | text | Shown when SSL selected |
+| SSL Keystore Password | text | Shown when SSL selected |
+| Consumer Properties | key-value pairs | Additional consumer config (optional) |
 
 ### Step 5: Review & Export
 
@@ -495,4 +492,5 @@ const errorClass = "text-red-600 text-sm mt-1";
 | Create only (no import) | Simpler codebase, clear use case |
 | Basic validation | Balance between strictness and usability |
 | Schema name = table name | Pinot convention; schema name matches table name without type suffix |
-| Table-type-specific options | BATCH for OFFLINE, STREAM/Upsert/Dedup for REALTIME only |
+| Table-type-specific options | BATCH for OFFLINE, Kafka stream/Upsert/Dedup for REALTIME only |
+| Kafka-only stream support | Initial version focuses on Kafka; Kinesis/Pulsar can be added later |
