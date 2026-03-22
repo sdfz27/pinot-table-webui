@@ -10,7 +10,8 @@ export type DataType =
   | "TIMESTAMP"
   | "STRING"
   | "JSON"
-  | "BYTES";
+  | "BYTES"
+  | "MAP";
 
 export type FieldType = "DIMENSION" | "METRIC" | "DATETIME" | "COMPLEX";
 

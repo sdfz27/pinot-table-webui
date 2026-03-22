@@ -8,7 +8,10 @@ import type {
 import type { ColumnData, WizardStateShape } from "../types/wizard";
 
 function toDimensionSpec(col: ColumnData): DimensionFieldSpec {
-  const spec: DimensionFieldSpec = { name: col.name, dataType: col.dataType };
+  const spec: DimensionFieldSpec = {
+    name: col.name,
+    dataType: col.dataType as DimensionFieldSpec["dataType"],
+  };
   if (col.defaultNullValue !== undefined && col.defaultNullValue !== "") {
     spec.defaultNullValue = col.defaultNullValue;
   }

@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { WizardStateShape, ColumnData } from "../types/wizard";
 
 const initialState: WizardStateShape = {
-  currentStep: 1,
+  currentStep: 0,
   tableName: "",
   tableType: "OFFLINE",
   columns: [],
