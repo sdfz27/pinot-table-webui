@@ -1,0 +1,66 @@
+// Pinot Schema Types - JSON output uses Pinot keys (e.g. dimensionFieldSpecs plural)
+
+export type DataType =
+  | "INT"
+  | "LONG"
+  | "FLOAT"
+  | "DOUBLE"
+  | "BIG_DECIMAL"
+  | "BOOLEAN"
+  | "TIMESTAMP"
+  | "STRING"
+  | "JSON"
+  | "BYTES";
+
+export type FieldType = "DIMENSION" | "METRIC" | "DATETIME" | "COMPLEX";
+
+export interface DimensionFieldSpec {
+  name: string;
+  dataType: DataType;
+  defaultNullValue?: string | number;
+  singleValueField?: boolean;
+}
+
+export interface MetricFieldSpec {
+  name: string;
+  dataType: "INT" | "LONG" | "FLOAT" | "DOUBLE" | "BIG_DECIMAL" | "BYTES";
+  defaultNullValue?: number;
+}
+
+export interface DateTimeFieldSpec {
+  name: string;
+  dataType: "STRING" | "INT" | "LONG" | "TIMESTAMP";
+  format: string;
+  granularity: string;
+  defaultNullValue?: string | number;
+}
+
+export interface ComplexFieldSpec {
+  name: string;
+  dataType: "MAP";
+  fieldType: "COMPLEX";
+  notNull: boolean;
+  childFieldSpecs: {
+    key: {
+      name: "key";
+      dataType: "STRING";
+      fieldType: "DIMENSION";
+      notNull: boolean;
+    };
+    value: {
+      name: "value";
+      dataType: DataType;
+      fieldType: "DIMENSION";
+      notNull: boolean;
+    };
+  };
+}
+
+export interface PinotSchema {
+  schemaName: string;
+  enableColumnBasedNullHandling?: boolean;
+  dimensionFieldSpecs: DimensionFieldSpec[];
+  metricFieldSpecs: MetricFieldSpec[];
+  dateTimeFieldSpecs: DateTimeFieldSpec[];
+  complexFieldSpecs?: ComplexFieldSpec[];
+}
