@@ -11,11 +11,12 @@
   },
   "dependencies": {
     "@refinedev/core": "^4.58.0",
-    "zod": "^3.24.0",
     "@refinedev/react-router-v6": "^4.6.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.8.1"
+    "react-router-dom": "^6.8.1",
+    "zod": "^3.24.0",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
