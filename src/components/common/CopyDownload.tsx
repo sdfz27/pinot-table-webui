@@ -36,10 +36,18 @@ export function CopyDownload({
     <div>
       {label && <div className="mb-2 font-medium">{label}</div>}
       <div className="flex gap-2">
-        <button type="button" onClick={handleCopy}>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
+        >
           Copy
         </button>
-        <button type="button" onClick={handleDownload}>
+        <button
+          type="button"
+          onClick={handleDownload}
+          className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+        >
           Download
         </button>
       </div>

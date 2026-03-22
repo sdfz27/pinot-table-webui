@@ -123,6 +123,7 @@ export const columnSchema = z
 export const schemaStepSchema = z
   .object({
     columns: z.array(columnSchema).min(1, "At least one column is required"),
+    enableColumnBasedNullHandling: z.boolean().optional(),
   })
   .refine(
     (data) => {
@@ -137,38 +138,75 @@ export const indexingStepSchema = z.object({
   replication: z.number().min(1, "Replication must be at least 1"),
 });
 
+const upsertDedupSchema = {
+  enableUpsert: z.boolean().optional(),
+  upsertConfig: z
+    .object({
+      mode: z.enum(["FULL", "PARTIAL"]),
+      upsertKeyColumns: z.array(z.string()).optional(),
+    })
+    .optional(),
+  enableDedup: z.boolean().optional(),
+  dedupConfig: z
+    .object({
+      hashFunction: z.enum(["NONE", "MD5", "MURMUR3"]),
+    })
+    .optional(),
+};
+
 /** Creates ingestion step schema with tableType context for STREAM config validation. */
 export function createIngestionStepSchema(
   tableType: "OFFLINE" | "REALTIME"
 ) {
-  return z
-    .object({
-      ingestionType: z.enum(["NONE", "BATCH", "STREAM"]),
-      streamConfig: z
-        .object({
-          topicName: z.string().optional(),
-          bootstrapServers: z.string().optional(),
-        })
-        .optional(),
-      batchConfig: z.object({}).passthrough().optional(),
-    })
-    .superRefine((data, ctx) => {
-      if (data.ingestionType === "STREAM" && tableType === "REALTIME") {
-        const sc = data.streamConfig;
-        if (!sc?.topicName?.trim()) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "Topic name is required for stream ingestion",
-            path: ["streamConfig", "topicName"],
-          });
-        }
-        if (!sc?.bootstrapServers?.trim()) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "Bootstrap servers are required for stream ingestion",
-            path: ["streamConfig", "bootstrapServers"],
-          });
-        }
+  const base = z.object({
+    ingestionType: z.enum(["NONE", "BATCH", "STREAM"]),
+    streamConfig: z
+      .object({
+        topicName: z.string().optional(),
+        bootstrapServers: z.string().optional(),
+      })
+      .optional(),
+    batchConfig: z.object({}).passthrough().optional(),
+  });
+
+  const withRealtime = tableType === "REALTIME"
+    ? base.extend(upsertDedupSchema)
+    : base;
+
+  return withRealtime.superRefine((data, ctx) => {
+    if (data.ingestionType === "STREAM" && tableType === "REALTIME") {
+      const sc = data.streamConfig;
+      if (!sc?.topicName?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Topic name is required for stream ingestion",
+          path: ["streamConfig", "topicName"],
+        });
       }
-    });
+      if (!sc?.bootstrapServers?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Bootstrap servers are required for stream ingestion",
+          path: ["streamConfig", "bootstrapServers"],
+        });
+      }
+    }
+    if (tableType === "REALTIME") {
+      const d = data as z.infer<typeof base> & typeof upsertDedupSchema;
+      if (d.enableUpsert && (!d.upsertConfig?.mode || (d.upsertConfig?.upsertKeyColumns?.length ?? 0) === 0)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Upsert mode and at least one key column are required when upsert is enabled",
+          path: ["upsertConfig"],
+        });
+      }
+      if (d.enableDedup && !d.dedupConfig?.hashFunction) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Hash function is required when dedup is enabled",
+          path: ["dedupConfig"],
+        });
+      }
+    }
+  });
 }

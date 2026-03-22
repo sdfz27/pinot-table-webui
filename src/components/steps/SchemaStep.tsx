@@ -11,17 +11,26 @@ import type { ColumnData } from "../../types/wizard";
 type SchemaFormData = z.infer<typeof schemaStepSchema>;
 
 export function SchemaStep() {
-  const { currentStep, columns, updateColumns, setStep } = useWizardStore();
+  const {
+    currentStep,
+    columns,
+    enableColumnBasedNullHandling,
+    updateColumns,
+    updateIndexing,
+    setStep,
+  } = useWizardStore();
 
   const {
     watch,
     setValue,
     handleSubmit,
+    register,
     formState: { errors },
   } = useForm<SchemaFormData>({
     resolver: zodResolver(schemaStepSchema),
     defaultValues: {
       columns: columns.length > 0 ? columns : [],
+      enableColumnBasedNullHandling: enableColumnBasedNullHandling ?? false,
     },
   });
 
@@ -29,6 +38,9 @@ export function SchemaStep() {
 
   const onValid = (data: SchemaFormData) => {
     updateColumns(data.columns as ColumnData[]);
+    updateIndexing({
+      enableColumnBasedNullHandling: data.enableColumnBasedNullHandling ?? false,
+    });
     setStep(currentStep + 1);
   };
 
@@ -53,6 +65,16 @@ export function SchemaStep() {
         <div className="rounded-lg bg-white p-6 shadow-md">
           <h2 className="mb-4 text-lg font-semibold">Schema Columns</h2>
           <div className="space-y-4">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                {...register("enableColumnBasedNullHandling")}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Enable column-based null handling
+              </span>
+            </label>
             <ColumnList
               columns={(formColumns?.length ? formColumns : []) as ColumnData[]}
               onChange={handleColumnsChange}

@@ -5,18 +5,30 @@ import { createIngestionStepSchema } from "../../utils/validation";
 import { useWizardStore } from "../../store/wizardStore";
 import { StepIndicator } from "../wizard/StepIndicator";
 import { NavigationButtons } from "../wizard/NavigationButtons";
-import type { BatchIngestionConfig, StreamIngestionConfig } from "../../types/pinotTable";
+import type {
+  BatchIngestionConfig,
+  DedupConfig,
+  StreamIngestionConfig,
+  UpsertConfig,
+} from "../../types/pinotTable";
 
 export function IngestionStep() {
   const {
     currentStep,
     tableType,
+    columns,
     ingestionType,
     batchConfig,
     streamConfig,
+    enableUpsert,
+    upsertConfig,
+    enableDedup,
+    dedupConfig,
     updateIngestion,
     setStep,
   } = useWizardStore();
+
+  const dimensionColumns = columns.filter((c) => c.fieldType === "DIMENSION");
 
   const ingestionSchema = createIngestionStepSchema(tableType);
 
@@ -25,10 +37,28 @@ export function IngestionStep() {
   const canSelectBatch = tableType === "OFFLINE";
   const canSelectStream = tableType === "REALTIME";
 
+  const defaultRealtime =
+    tableType === "REALTIME"
+      ? {
+          enableUpsert: enableUpsert ?? false,
+          upsertConfig: upsertConfig
+            ? {
+                mode: upsertConfig.mode,
+                upsertKeyColumns: upsertConfig.upsertKeyColumns ?? [],
+              }
+            : { mode: "FULL" as const, upsertKeyColumns: [] },
+          enableDedup: enableDedup ?? false,
+          dedupConfig: dedupConfig
+            ? { hashFunction: dedupConfig.hashFunction }
+            : { hashFunction: "NONE" as const },
+        }
+      : {};
+
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<IngestionFormData>({
     resolver: zodResolver(ingestionSchema),
@@ -44,10 +74,14 @@ export function IngestionStep() {
         segmentIngestionType: "APPEND",
         segmentIngestionFrequency: "DAILY",
       },
+      ...defaultRealtime,
     },
   });
 
   const selectedIngestionType = watch("ingestionType");
+  const watchedEnableUpsert = watch("enableUpsert");
+  const watchedEnableDedup = watch("enableDedup");
+  const watchedUpsertKeyColumns = watch("upsertConfig.upsertKeyColumns");
 
   const onValid = (data: IngestionFormData) => {
     const updates: Parameters<typeof updateIngestion>[0] = {
@@ -70,6 +104,31 @@ export function IngestionStep() {
     } else {
       updates.batchConfig = undefined;
       updates.streamConfig = undefined;
+    }
+    if (tableType === "REALTIME") {
+      const d = data as IngestionFormData & {
+        enableUpsert?: boolean;
+        upsertConfig?: { mode: "FULL" | "PARTIAL"; upsertKeyColumns?: string[] };
+        enableDedup?: boolean;
+        dedupConfig?: { hashFunction: "NONE" | "MD5" | "MURMUR3" };
+      };
+      updates.enableUpsert = d.enableUpsert ?? false;
+      if (d.enableUpsert && d.upsertConfig) {
+        updates.upsertConfig = {
+          mode: d.upsertConfig.mode,
+          upsertKeyColumns: d.upsertConfig.upsertKeyColumns ?? [],
+        } as UpsertConfig;
+      } else {
+        updates.upsertConfig = undefined;
+      }
+      updates.enableDedup = d.enableDedup ?? false;
+      if (d.enableDedup && d.dedupConfig) {
+        updates.dedupConfig = {
+          hashFunction: d.dedupConfig.hashFunction,
+        } as DedupConfig;
+      } else {
+        updates.dedupConfig = undefined;
+      }
     }
     updateIngestion(updates);
     setStep(currentStep + 1);
@@ -199,6 +258,122 @@ export function IngestionStep() {
                 )}
               </div>
             </div>
+          )}
+
+          {tableType === "REALTIME" && (
+            <>
+              <div className="rounded border border-gray-200 p-4 space-y-4">
+                <h3 className="font-medium">Upsert</h3>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    {...register("enableUpsert")}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    Enable Upsert
+                  </span>
+                </label>
+                {watchedEnableUpsert && (
+                  <div className="ml-6 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Mode
+                      </label>
+                      <select
+                        {...register("upsertConfig.mode")}
+                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 bg-white"
+                      >
+                        <option value="FULL">FULL</option>
+                        <option value="PARTIAL">PARTIAL</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Upsert Key Columns
+                      </label>
+                      {dimensionColumns.length === 0 ? (
+                        <p className="mt-1 text-sm text-gray-500">
+                          Add dimension columns in Schema step
+                        </p>
+                      ) : (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {dimensionColumns.map((col) => (
+                            <label
+                              key={col.id}
+                              className="flex items-center gap-1 rounded border border-gray-200 px-2 py-1 text-sm"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={
+                                  (watchedUpsertKeyColumns ?? []).includes(
+                                    col.name
+                                  )
+                                }
+                                onChange={(e) => {
+                                  const current =
+                                    watchedUpsertKeyColumns ?? [];
+                                  if (e.target.checked) {
+                                    setValue(
+                                      "upsertConfig.upsertKeyColumns",
+                                      [...current, col.name],
+                                      { shouldValidate: true }
+                                    );
+                                  } else {
+                                    setValue(
+                                      "upsertConfig.upsertKeyColumns",
+                                      current.filter((c) => c !== col.name),
+                                      { shouldValidate: true }
+                                    );
+                                  }
+                                }}
+                                className="rounded border-gray-300"
+                              />
+                              {col.name}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                      {errors.upsertConfig && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {(errors.upsertConfig as { message?: string })
+                            ?.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded border border-gray-200 p-4 space-y-4">
+                <h3 className="font-medium">Dedup</h3>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    {...register("enableDedup")}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    Enable Dedup
+                  </span>
+                </label>
+                {watchedEnableDedup && (
+                  <div className="ml-6">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Hash Function
+                    </label>
+                    <select
+                      {...register("dedupConfig.hashFunction")}
+                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 bg-white"
+                    >
+                      <option value="NONE">NONE</option>
+                      <option value="MD5">MD5</option>
+                      <option value="MURMUR3">MURMUR3</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
         </div>
