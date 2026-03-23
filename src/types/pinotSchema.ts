@@ -36,7 +36,7 @@ export interface MetricFieldSpec {
 export interface DateTimeFieldSpec {
   name: string;
   dataType: "STRING" | "INT" | "LONG" | "TIMESTAMP";
-  fieldType?: "DATETIME";
+  fieldType?: "DATE_TIME";
   format: string;
   granularity: string;
   defaultNullValue?: string | number;

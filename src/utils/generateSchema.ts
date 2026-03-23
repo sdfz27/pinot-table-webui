@@ -39,7 +39,7 @@ function toDateTimeSpec(col: ColumnData): DateTimeFieldSpec {
   const spec: DateTimeFieldSpec = {
     name: col.name,
     dataType: col.dataType as DateTimeFieldSpec["dataType"],
-    fieldType: "DATETIME",
+    fieldType: "DATE_TIME",
     format: col.format ?? "1:MILLISECONDS:EPOCH",
     granularity: col.granularity ?? "1:MILLISECONDS",
   };
