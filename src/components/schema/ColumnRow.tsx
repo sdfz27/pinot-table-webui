@@ -55,7 +55,7 @@ export interface ColumnRowProps {
 
 export function ColumnRow({ column, onChange, onRemove }: ColumnRowProps) {
   const dataTypes = getDataTypesForFieldType(column.fieldType);
-  const showSingleValueField = column.fieldType === "DIMENSION";
+  const showMultiValueField = column.fieldType === "DIMENSION";
   const showDateTimeFields = column.fieldType === "DATETIME";
   const showComplexFields = column.fieldType === "COMPLEX";
 
@@ -136,17 +136,17 @@ export function ColumnRow({ column, onChange, onRemove }: ColumnRowProps) {
           placeholder="Optional"
         />
       </div>
-      {showSingleValueField && (
+      {showMultiValueField && (
         <div className="flex items-center gap-2 mt-6">
           <input
-            id={`single-value-${column.id}`}
+            id={`multi-value-${column.id}`}
             type="checkbox"
-            checked={column.singleValueField ?? false}
-            onChange={(e) => update({ singleValueField: e.target.checked })}
+            checked={column.singleValueField === false}
+            onChange={(e) => update({ singleValueField: e.target.checked ? false : undefined })}
             className="rounded"
           />
-          <label htmlFor={`single-value-${column.id}`} className="text-sm">
-            Single Value Field
+          <label htmlFor={`multi-value-${column.id}`} className="text-sm">
+            Multi Value Field
           </label>
         </div>
       )}

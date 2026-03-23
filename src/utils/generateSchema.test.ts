@@ -15,6 +15,7 @@ function minimalWizardWithDimensionColumn(): WizardStateShape {
         dataType: "STRING",
       },
     ],
+    primaryKeyColumns: [],
     enableColumnBasedNullHandling: false,
     timeColumnName: "",
     replication: 1,
@@ -36,13 +37,44 @@ describe("generateSchema", () => {
     expect(schema.schemaName).toBe("my_table");
   });
 
-  it("maps one dimension column to one entry in dimensionFieldSpecs", () => {
+  it("maps one dimension column to one entry in dimensionFieldSpecs with fieldType", () => {
     const state = minimalWizardWithDimensionColumn();
     const schema = generateSchema(state);
     expect(schema.dimensionFieldSpecs).toHaveLength(1);
     expect(schema.dimensionFieldSpecs[0]).toEqual({
       name: "user_id",
       dataType: "STRING",
+      fieldType: "DIMENSION",
     });
+  });
+
+  it("omits singleValueField for single-value dimension (default), includes false for multi-value", () => {
+    const singleState = minimalWizardWithDimensionColumn();
+    const singleSchema = generateSchema(singleState);
+    expect(singleSchema.dimensionFieldSpecs[0].singleValueField).toBeUndefined();
+
+    const multiState = {
+      ...minimalWizardWithDimensionColumn(),
+      columns: [
+        {
+          id: "col-1",
+          fieldType: "DIMENSION" as const,
+          name: "tags",
+          dataType: "STRING" as const,
+          singleValueField: false,
+        },
+      ],
+    };
+    const multiSchema = generateSchema(multiState);
+    expect(multiSchema.dimensionFieldSpecs[0].singleValueField).toBe(false);
+  });
+
+  it("includes primaryKeyColumns when set", () => {
+    const state = {
+      ...minimalWizardWithDimensionColumn(),
+      primaryKeyColumns: ["user_id"],
+    };
+    const schema = generateSchema(state);
+    expect(schema.primaryKeyColumns).toEqual(["user_id"]);
   });
 });

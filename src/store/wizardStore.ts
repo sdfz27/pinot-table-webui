@@ -6,6 +6,7 @@ const initialState: WizardStateShape = {
   tableName: "",
   tableType: "OFFLINE",
   columns: [],
+  primaryKeyColumns: [],
   enableColumnBasedNullHandling: false,
   timeColumnName: "",
   replication: 1,

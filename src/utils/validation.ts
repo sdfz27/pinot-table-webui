@@ -123,6 +123,7 @@ export const columnSchema = z
 export const schemaStepSchema = z
   .object({
     columns: z.array(columnSchema).min(1, "At least one column is required"),
+    primaryKeyColumns: z.array(z.string()).optional(),
     enableColumnBasedNullHandling: z.boolean().optional(),
   })
   .refine(
@@ -158,22 +159,20 @@ const upsertDedupSchema = {
 export function createIngestionStepSchema(
   tableType: "OFFLINE" | "REALTIME"
 ) {
-  const base = z.object({
-    ingestionType: z.enum(["NONE", "BATCH", "STREAM"]),
-    streamConfig: z
-      .object({
-        topicName: z.string().optional(),
-        bootstrapServers: z.string().optional(),
-      })
-      .optional(),
-    batchConfig: z.object({}).passthrough().optional(),
-  });
+  const base = z
+    .object({
+      ingestionType: z.enum(["NONE", "BATCH", "STREAM"]),
+      streamConfig: z
+        .object({
+          topicName: z.string().optional(),
+          bootstrapServers: z.string().optional(),
+        })
+        .optional(),
+      batchConfig: z.object({}).passthrough().optional(),
+    })
+    .extend(upsertDedupSchema);
 
-  const withRealtime = tableType === "REALTIME"
-    ? base.extend(upsertDedupSchema)
-    : base;
-
-  return withRealtime.superRefine((data, ctx) => {
+  return base.superRefine((data, ctx) => {
     if (data.ingestionType === "STREAM" && tableType === "REALTIME") {
       const sc = data.streamConfig;
       if (!sc?.topicName?.trim()) {
@@ -192,15 +191,17 @@ export function createIngestionStepSchema(
       }
     }
     if (tableType === "REALTIME") {
-      const d = data as z.infer<typeof base> & typeof upsertDedupSchema;
-      if (d.enableUpsert && (!d.upsertConfig?.mode || (d.upsertConfig?.upsertKeyColumns?.length ?? 0) === 0)) {
+      const d = data;
+      const uc = d.upsertConfig;
+      const dc = d.dedupConfig;
+      if (d.enableUpsert && (!uc || !uc.mode || (uc.upsertKeyColumns?.length ?? 0) === 0)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Upsert mode and at least one key column are required when upsert is enabled",
           path: ["upsertConfig"],
         });
       }
-      if (d.enableDedup && !d.dedupConfig?.hashFunction) {
+      if (d.enableDedup && (!dc || !dc.hashFunction)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Hash function is required when dedup is enabled",

@@ -9,6 +9,7 @@ describe("wizard types", () => {
       tableName: "",
       tableType: "OFFLINE",
       columns: [],
+      primaryKeyColumns: [],
       enableColumnBasedNullHandling: false,
       timeColumnName: "",
       replication: 1,
