@@ -21,6 +21,7 @@ export type DimensionDataType = Exclude<DataType, "BIG_DECIMAL">;
 export interface DimensionFieldSpec {
   name: string;
   dataType: DimensionDataType;
+  fieldType?: "DIMENSION";
   defaultNullValue?: string | number;
   singleValueField?: boolean;
 }
@@ -28,12 +29,14 @@ export interface DimensionFieldSpec {
 export interface MetricFieldSpec {
   name: string;
   dataType: "INT" | "LONG" | "FLOAT" | "DOUBLE" | "BIG_DECIMAL" | "BYTES";
+  fieldType?: "METRIC";
   defaultNullValue?: number;
 }
 
 export interface DateTimeFieldSpec {
   name: string;
   dataType: "STRING" | "INT" | "LONG" | "TIMESTAMP";
+  fieldType?: "DATETIME";
   format: string;
   granularity: string;
   defaultNullValue?: string | number;
@@ -63,6 +66,7 @@ export interface ComplexFieldSpec {
 export interface PinotSchema {
   schemaName: string;
   enableColumnBasedNullHandling?: boolean;
+  primaryKeyColumns?: string[];
   dimensionFieldSpecs: DimensionFieldSpec[];
   metricFieldSpecs: MetricFieldSpec[];
   dateTimeFieldSpecs: DateTimeFieldSpec[];

@@ -11,12 +11,14 @@ function toDimensionSpec(col: ColumnData): DimensionFieldSpec {
   const spec: DimensionFieldSpec = {
     name: col.name,
     dataType: col.dataType as DimensionFieldSpec["dataType"],
+    fieldType: "DIMENSION",
   };
   if (col.defaultNullValue !== undefined && col.defaultNullValue !== "") {
     spec.defaultNullValue = col.defaultNullValue;
   }
-  if (col.singleValueField !== undefined) {
-    spec.singleValueField = col.singleValueField;
+  // Only include singleValueField when false (multi-value); single-value is default, omit when true
+  if (col.singleValueField === false) {
+    spec.singleValueField = false;
   }
   return spec;
 }
@@ -25,6 +27,7 @@ function toMetricSpec(col: ColumnData): MetricFieldSpec {
   const spec: MetricFieldSpec = {
     name: col.name,
     dataType: col.dataType as MetricFieldSpec["dataType"],
+    fieldType: "METRIC",
   };
   if (col.defaultNullValue !== undefined && col.defaultNullValue !== "") {
     spec.defaultNullValue = Number(col.defaultNullValue);
@@ -36,6 +39,7 @@ function toDateTimeSpec(col: ColumnData): DateTimeFieldSpec {
   const spec: DateTimeFieldSpec = {
     name: col.name,
     dataType: col.dataType as DateTimeFieldSpec["dataType"],
+    fieldType: "DATETIME",
     format: col.format ?? "1:MILLISECONDS:EPOCH",
     granularity: col.granularity ?? "1:MILLISECONDS",
   };
@@ -101,6 +105,10 @@ export function generateSchema(state: WizardStateShape): PinotSchema {
 
   if (state.enableColumnBasedNullHandling) {
     schema.enableColumnBasedNullHandling = true;
+  }
+
+  if (state.primaryKeyColumns && state.primaryKeyColumns.length > 0) {
+    schema.primaryKeyColumns = state.primaryKeyColumns;
   }
 
   if (complexFieldSpecs.length > 0) {

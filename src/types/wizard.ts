@@ -27,6 +27,7 @@ export interface WizardStateShape {
   tableName: string;
   tableType: TableType;
   columns: ColumnData[];
+  primaryKeyColumns: string[];
   enableColumnBasedNullHandling: boolean;
   timeColumnName: string;
   replication: number;
