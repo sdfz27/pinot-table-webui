@@ -5,6 +5,7 @@ import { indexingStepSchema } from "../../utils/validation";
 import { useWizardStore } from "../../store/wizardStore";
 import { StepIndicator } from "../wizard/StepIndicator";
 import { NavigationButtons } from "../wizard/NavigationButtons";
+import { SearchableColumnMultiSelect } from "../common/SearchableColumnMultiSelect";
 
 const indexColumnArrayFields = [
   { key: "noDictionaryColumns", label: "No dictionary columns" },
@@ -23,7 +24,7 @@ const indexingFormSchema = indexingStepSchema
     retentionTimeValue: z.number().optional(),
     sortedColumn: z.string().optional(),
     loadMode: z.enum(["HEAP", "MMAP"]),
-    completionMode: z.enum(["", "DOWNLOAD"]),
+    completionMode: z.enum(["BUILD", "DOWNLOAD"]),
     noDictionaryColumns: z.array(z.string()),
     invertedIndexColumns: z.array(z.string()),
     bloomFilterColumns: z.array(z.string()),
@@ -47,52 +48,6 @@ const indexingFormSchema = indexingStepSchema
   });
 
 type IndexingFormData = z.infer<typeof indexingFormSchema>;
-
-function ColumnCheckboxList({
-  idPrefix,
-  label,
-  columnNames,
-  selected,
-  onToggle,
-}: {
-  idPrefix: string;
-  label: string;
-  columnNames: string[];
-  selected: string[];
-  onToggle: (name: string) => void;
-}) {
-  if (columnNames.length === 0) {
-    return (
-      <div>
-        <p className="block text-sm font-medium text-gray-700">{label}</p>
-        <p className="mt-1 text-sm text-gray-500">Add columns in the schema step to select indexes.</p>
-      </div>
-    );
-  }
-  return (
-    <fieldset>
-      <legend className="mb-1 block text-sm font-medium text-gray-700">{label}</legend>
-      <div className="max-h-36 space-y-1.5 overflow-y-auto rounded-md border border-gray-200 bg-gray-50 p-2">
-        {columnNames.map((name) => (
-          <label
-            key={name}
-            htmlFor={`${idPrefix}-${name}`}
-            className="flex cursor-pointer items-center gap-2 text-sm"
-          >
-            <input
-              id={`${idPrefix}-${name}`}
-              type="checkbox"
-              checked={selected.includes(name)}
-              onChange={() => onToggle(name)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-            <span>{name}</span>
-          </label>
-        ))}
-      </div>
-    </fieldset>
-  );
-}
 
 export function IndexingStep() {
   const {
@@ -134,7 +89,7 @@ export function IndexingStep() {
       replication,
       retentionTimeUnit: retentionTimeUnit || "",
       retentionTimeValue: retentionTimeValue ?? 0,
-      completionMode: completionMode || "",
+      completionMode: completionMode === "BUILD" ? "BUILD" : "DOWNLOAD",
       sortedColumn: sortedColumn || "",
       loadMode,
       noDictionaryColumns: noDictionaryColumns ?? [],
@@ -149,19 +104,13 @@ export function IndexingStep() {
     },
   });
 
-  const toggleColumn = (field: (typeof indexColumnArrayFields)[number]["key"], name: string) => {
-    const cur = (watch(field) as string[]) ?? [];
-    const next = cur.includes(name) ? cur.filter((n) => n !== name) : [...cur, name];
-    setValue(field, next, { shouldDirty: true });
-  };
-
   const onValid = (data: IndexingFormData) => {
     updateIndexing({
       timeColumnName: data.timeColumnName || "",
       replication: data.replication,
       retentionTimeUnit: (data.retentionTimeUnit as "HOURS" | "DAYS" | "MONTHS" | "YEARS" | "") || "",
       retentionTimeValue: data.retentionTimeValue ?? 0,
-      completionMode: data.completionMode || "",
+      completionMode: data.completionMode,
       sortedColumn: data.sortedColumn || "",
       loadMode: data.loadMode,
       noDictionaryColumns: data.noDictionaryColumns,
@@ -274,15 +223,15 @@ export function IndexingStep() {
                   Completion config (completion mode)
                 </label>
                 <p className="mt-0.5 text-xs text-gray-500">
-                  For real-time tables, controls how consuming segments are completed (e.g. download from peer).
+                  Whether consuming segments are built locally or downloaded (e.g. from a peer). Default is DOWNLOAD.
                 </p>
                 <select
                   id="completionMode"
                   {...register("completionMode")}
                   className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
-                  <option value="">(None — omit completionConfig)</option>
                   <option value="DOWNLOAD">DOWNLOAD</option>
+                  <option value="BUILD">BUILD</option>
                 </select>
               </div>
             </section>
@@ -325,15 +274,15 @@ export function IndexingStep() {
                   <option value="MMAP">MMAP</option>
                 </select>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-6 sm:grid-cols-2">
                 {indexColumnArrayFields.map(({ key, label }) => (
-                  <ColumnCheckboxList
+                  <SearchableColumnMultiSelect
                     key={key}
-                    idPrefix={key}
+                    id={key}
                     label={label}
                     columnNames={allColumnNames}
                     selected={(watch(key) as string[]) ?? []}
-                    onToggle={(name) => toggleColumn(key, name)}
+                    onChange={(next) => setValue(key, next, { shouldDirty: true })}
                   />
                 ))}
               </div>

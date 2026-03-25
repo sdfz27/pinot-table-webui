@@ -23,9 +23,11 @@ export function generateTable(state: WizardStateShape): PinotTable {
       state.retentionTimeUnit as SegmentsConfig["retentionTimeUnit"];
     segmentsConfig.retentionTimeValue = state.retentionTimeValue;
   }
-  if (state.completionMode === "DOWNLOAD") {
-    segmentsConfig.completionConfig = { completionMode: "DOWNLOAD" };
-  }
+  const completionMode: "BUILD" | "DOWNLOAD" =
+    state.completionMode === "BUILD" || state.completionMode === "DOWNLOAD"
+      ? state.completionMode
+      : "DOWNLOAD";
+  segmentsConfig.completionConfig = { completionMode };
 
   const tableIndexConfig: TableIndexConfig = {
     loadMode: state.loadMode,

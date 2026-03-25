@@ -14,7 +14,7 @@ function offlineWithBatchIngestion(): WizardStateShape {
     replication: 1,
     retentionTimeUnit: "",
     retentionTimeValue: 0,
-    completionMode: "",
+    completionMode: "DOWNLOAD",
     fieldConfigList: [],
     sortedColumn: "",
     loadMode: "HEAP",
@@ -49,7 +49,7 @@ function realtimeWithStreamIngestion(): WizardStateShape {
     replication: 1,
     retentionTimeUnit: "",
     retentionTimeValue: 0,
-    completionMode: "",
+    completionMode: "DOWNLOAD",
     fieldConfigList: [],
     sortedColumn: "",
     loadMode: "HEAP",
@@ -104,7 +104,6 @@ describe("generateTable", () => {
 
   it("emits completionConfig, table index column lists, and tenants when set", () => {
     const state = offlineWithBatchIngestion();
-    state.completionMode = "DOWNLOAD";
     state.invertedIndexColumns = ["id"];
     state.brokerTenant = "broker_t";
     state.serverTenant = "server_t";
@@ -112,5 +111,12 @@ describe("generateTable", () => {
     expect(table.segmentsConfig.completionConfig).toEqual({ completionMode: "DOWNLOAD" });
     expect(table.tableIndexConfig.invertedIndexColumns).toEqual(["id"]);
     expect(table.tenants).toEqual({ broker: "broker_t", server: "server_t" });
+  });
+
+  it("emits completionConfig with BUILD when selected", () => {
+    const state = offlineWithBatchIngestion();
+    state.completionMode = "BUILD";
+    const table = generateTable(state);
+    expect(table.segmentsConfig.completionConfig).toEqual({ completionMode: "BUILD" });
   });
 });

@@ -2,7 +2,7 @@
 
 export type TableType = "OFFLINE" | "REALTIME";
 
-/** Real-time segment completion; `completionMode` may be `DOWNLOAD` or omitted. */
+/** Segment completion; `completionMode` is typically `BUILD` or `DOWNLOAD`. */
 export interface CompletionConfig {
   completionMode?: string;
 }

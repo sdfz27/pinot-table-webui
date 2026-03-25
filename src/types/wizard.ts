@@ -33,8 +33,8 @@ export interface WizardStateShape {
   replication: number;
   retentionTimeUnit: "DAYS" | "HOURS" | "MONTHS" | "YEARS" | "";
   retentionTimeValue: number;
-  /** Real-time segment completion; empty means omit from table config. */
-  completionMode: "" | "DOWNLOAD";
+  /** Segment completion mode in `segmentsConfig.completionConfig` (BUILD or DOWNLOAD; default DOWNLOAD). */
+  completionMode: "BUILD" | "DOWNLOAD";
   fieldConfigList: FieldConfig[];
   sortedColumn: string;
   loadMode: "HEAP" | "MMAP";

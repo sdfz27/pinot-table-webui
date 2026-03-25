@@ -15,7 +15,7 @@ describe("wizard types", () => {
       replication: 1,
       retentionTimeUnit: "",
       retentionTimeValue: 0,
-      completionMode: "",
+      completionMode: "DOWNLOAD",
       fieldConfigList: [],
       sortedColumn: "",
       loadMode: "HEAP",
