@@ -60,9 +60,64 @@ export interface StreamIngestionConfig {
   consumerProperties?: Record<string, string>;
 }
 
+/** Matches `org.apache.pinot.spi.utils.Enablement` JSON. */
+export type UpsertEnablement = "ENABLE" | "DISABLE" | "DEFAULT";
+
+/** Matches `UpsertConfig.ConsistencyMode` in Pinot. */
+export type UpsertConsistencyMode = "NONE" | "SYNC" | "SNAPSHOT";
+
+/** Matches `HashFunction` in Pinot (`org.apache.pinot.spi.config.table.HashFunction`). */
+export type UpsertHashFunction =
+  | "NONE"
+  | "MD5"
+  | "MURMUR3"
+  | "UUID"
+  | "XXHASH"
+  | "XXH128";
+
+/** Matches `UpsertConfig.Strategy` for partial upsert. */
+export type DefaultPartialUpsertStrategy =
+  | "APPEND"
+  | "IGNORE"
+  | "INCREMENT"
+  | "MAX"
+  | "MIN"
+  | "OVERWRITE"
+  | "FORCE_OVERWRITE"
+  | "UNION";
+
 export interface UpsertConfig {
   mode: "FULL" | "PARTIAL";
-  upsertKeyColumns: string[];
+  /** Pinot `comparisonColumns` — columns used to pick the latest row for a primary key (defaults to time column if omitted). */
+  comparisonColumns: string[];
+  snapshot: UpsertEnablement;
+  preload: UpsertEnablement;
+  dropOutOfOrderRecord: boolean;
+  enableDeletedKeysCompactionConsistency: boolean;
+  deletedKeysTTL: number;
+  consistencyMode: UpsertConsistencyMode;
+  hashFunction: UpsertHashFunction;
+  defaultPartialUpsertStrategy: DefaultPartialUpsertStrategy;
+  /** Deprecated in Pinot; kept for backward-compatible table configs. */
+  enableSnapshot: boolean;
+  enablePreload: boolean;
+}
+
+export function createDefaultUpsertConfig(): UpsertConfig {
+  return {
+    mode: "FULL",
+    comparisonColumns: [],
+    snapshot: "ENABLE",
+    preload: "ENABLE",
+    dropOutOfOrderRecord: false,
+    enableDeletedKeysCompactionConsistency: false,
+    deletedKeysTTL: 0,
+    consistencyMode: "NONE",
+    hashFunction: "NONE",
+    defaultPartialUpsertStrategy: "OVERWRITE",
+    enableSnapshot: true,
+    enablePreload: true,
+  };
 }
 
 export interface DedupConfig {

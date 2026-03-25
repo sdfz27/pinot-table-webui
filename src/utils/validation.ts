@@ -139,14 +139,40 @@ export const indexingStepSchema = z.object({
   replication: z.number().min(1, "Replication must be at least 1"),
 });
 
+const upsertConfigSchema = z.object({
+  mode: z.enum(["FULL", "PARTIAL"]),
+  comparisonColumns: z.array(z.string()).optional(),
+  snapshot: z.enum(["ENABLE", "DISABLE", "DEFAULT"]),
+  preload: z.enum(["ENABLE", "DISABLE", "DEFAULT"]),
+  dropOutOfOrderRecord: z.boolean(),
+  enableDeletedKeysCompactionConsistency: z.boolean(),
+  deletedKeysTTL: z.number(),
+  consistencyMode: z.enum(["NONE", "SYNC", "SNAPSHOT"]),
+  hashFunction: z.enum([
+    "NONE",
+    "MD5",
+    "MURMUR3",
+    "UUID",
+    "XXHASH",
+    "XXH128",
+  ]),
+  defaultPartialUpsertStrategy: z.enum([
+    "APPEND",
+    "IGNORE",
+    "INCREMENT",
+    "MAX",
+    "MIN",
+    "OVERWRITE",
+    "FORCE_OVERWRITE",
+    "UNION",
+  ]),
+  enableSnapshot: z.boolean(),
+  enablePreload: z.boolean(),
+});
+
 const upsertDedupSchema = {
   enableUpsert: z.boolean().optional(),
-  upsertConfig: z
-    .object({
-      mode: z.enum(["FULL", "PARTIAL"]),
-      upsertKeyColumns: z.array(z.string()).optional(),
-    })
-    .optional(),
+  upsertConfig: upsertConfigSchema.optional(),
   enableDedup: z.boolean().optional(),
   dedupConfig: z
     .object({
@@ -194,11 +220,15 @@ export function createIngestionStepSchema(
       const d = data;
       const uc = d.upsertConfig;
       const dc = d.dedupConfig;
-      if (d.enableUpsert && (!uc || !uc.mode || (uc.upsertKeyColumns?.length ?? 0) === 0)) {
+      if (
+        d.enableUpsert &&
+        (!uc || !uc.mode || (uc.comparisonColumns?.length ?? 0) === 0)
+      ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Upsert mode and at least one key column are required when upsert is enabled",
-          path: ["upsertConfig"],
+          message:
+            "Upsert mode and at least one comparison column are required when upsert is enabled",
+          path: ["upsertConfig", "comparisonColumns"],
         });
       }
       if (d.enableDedup && (!dc || !dc.hashFunction)) {

@@ -43,13 +43,13 @@ export function generateTable(state: WizardStateShape): PinotTable {
   const onHeap = filterKnownColumns(state.onHeapDictionaryColumns ?? [], columnNames);
   const varLen = filterKnownColumns(state.varLengthDictionaryColumns ?? [], columnNames);
   const jsonIdx = filterKnownColumns(state.jsonIndexColumns ?? [], columnNames);
-  if (nd.length) tableIndexConfig.noDictionaryColumns = nd;
-  if (inv.length) tableIndexConfig.invertedIndexColumns = inv;
-  if (bloom.length) tableIndexConfig.bloomFilterColumns = bloom;
-  if (range.length) tableIndexConfig.rangeIndexColumns = range;
-  if (onHeap.length) tableIndexConfig.onHeapDictionaryColumns = onHeap;
-  if (varLen.length) tableIndexConfig.varLengthDictionaryColumns = varLen;
-  if (jsonIdx.length) tableIndexConfig.jsonIndexColumns = jsonIdx;
+  tableIndexConfig.noDictionaryColumns = nd;
+  tableIndexConfig.invertedIndexColumns = inv;
+  tableIndexConfig.bloomFilterColumns = bloom;
+  tableIndexConfig.rangeIndexColumns = range;
+  tableIndexConfig.onHeapDictionaryColumns = onHeap;
+  tableIndexConfig.varLengthDictionaryColumns = varLen;
+  tableIndexConfig.jsonIndexColumns = jsonIdx;
 
   const table: PinotTable = {
     tableName: state.tableName,

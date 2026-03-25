@@ -5,12 +5,23 @@ import { createIngestionStepSchema } from "../../utils/validation";
 import { useWizardStore } from "../../store/wizardStore";
 import { StepIndicator } from "../wizard/StepIndicator";
 import { NavigationButtons } from "../wizard/NavigationButtons";
-import type {
-  BatchIngestionConfig,
-  DedupConfig,
-  StreamIngestionConfig,
-  UpsertConfig,
+import {
+  createDefaultUpsertConfig,
+  type BatchIngestionConfig,
+  type DedupConfig,
+  type StreamIngestionConfig,
+  type UpsertConfig,
 } from "../../types/pinotTable";
+
+function upsertConfigForForm(existing?: UpsertConfig): UpsertConfig {
+  const d = createDefaultUpsertConfig();
+  if (!existing) return d;
+  return {
+    ...d,
+    ...existing,
+    comparisonColumns: existing.comparisonColumns ?? [],
+  };
+}
 
 export function IngestionStep() {
   const {
@@ -41,12 +52,7 @@ export function IngestionStep() {
     tableType === "REALTIME"
       ? {
           enableUpsert: enableUpsert ?? false,
-          upsertConfig: upsertConfig
-            ? {
-                mode: upsertConfig.mode,
-                upsertKeyColumns: upsertConfig.upsertKeyColumns ?? [],
-              }
-            : { mode: "FULL" as const, upsertKeyColumns: [] },
+          upsertConfig: upsertConfigForForm(upsertConfig),
           enableDedup: enableDedup ?? false,
           dedupConfig: dedupConfig
             ? { hashFunction: dedupConfig.hashFunction }
@@ -81,7 +87,7 @@ export function IngestionStep() {
   const selectedIngestionType = watch("ingestionType");
   const watchedEnableUpsert = watch("enableUpsert");
   const watchedEnableDedup = watch("enableDedup");
-  const watchedUpsertKeyColumns = watch("upsertConfig.upsertKeyColumns");
+  const watchedComparisonColumns = watch("upsertConfig.comparisonColumns");
 
   const onValid = (data: IngestionFormData) => {
     const updates: Parameters<typeof updateIngestion>[0] = {
@@ -108,16 +114,16 @@ export function IngestionStep() {
     if (tableType === "REALTIME") {
       const d = data as IngestionFormData & {
         enableUpsert?: boolean;
-        upsertConfig?: { mode: "FULL" | "PARTIAL"; upsertKeyColumns?: string[] };
+        upsertConfig?: UpsertConfig;
         enableDedup?: boolean;
         dedupConfig?: { hashFunction: "NONE" | "MD5" | "MURMUR3" };
       };
       updates.enableUpsert = d.enableUpsert ?? false;
       if (d.enableUpsert && d.upsertConfig) {
-        updates.upsertConfig = {
-          mode: d.upsertConfig.mode,
-          upsertKeyColumns: d.upsertConfig.upsertKeyColumns ?? [],
-        } as UpsertConfig;
+        updates.upsertConfig = upsertConfigForForm({
+          ...d.upsertConfig,
+          comparisonColumns: d.upsertConfig.comparisonColumns ?? [],
+        });
       } else {
         updates.upsertConfig = undefined;
       }
@@ -147,7 +153,7 @@ export function IngestionStep() {
       <StepIndicator currentStep={currentStep} />
       <div className="max-w-3xl mx-auto space-y-4">
         <div className="rounded-lg bg-white p-6 shadow-md">
-          <h2 className="mb-4 text-lg font-semibold">Ingestion & Special</h2>
+          <h2 className="mb-4 text-lg font-semibold">Ingestion & Upsert</h2>
         <div className="space-y-4">
           <div>
             <span className="block text-sm font-medium text-gray-700">Ingestion Type</span>
@@ -292,6 +298,10 @@ export function IngestionStep() {
                       <label className="block text-sm font-medium text-gray-700">
                         Upsert Key Columns
                       </label>
+                      <p className="mt-0.5 text-xs text-gray-500">
+                        Emitted as <code className="text-xs">comparisonColumns</code>{" "}
+                        in table JSON. If empty, Pinot uses the time column.
+                      </p>
                       {dimensionColumns.length === 0 ? (
                         <p className="mt-1 text-sm text-gray-500">
                           Add dimension columns in Schema step
@@ -306,22 +316,22 @@ export function IngestionStep() {
                               <input
                                 type="checkbox"
                                 checked={
-                                  (watchedUpsertKeyColumns ?? []).includes(
+                                  (watchedComparisonColumns ?? []).includes(
                                     col.name
                                   )
                                 }
                                 onChange={(e) => {
                                   const current =
-                                    watchedUpsertKeyColumns ?? [];
+                                    watchedComparisonColumns ?? [];
                                   if (e.target.checked) {
                                     setValue(
-                                      "upsertConfig.upsertKeyColumns",
+                                      "upsertConfig.comparisonColumns",
                                       [...current, col.name],
                                       { shouldValidate: true }
                                     );
                                   } else {
                                     setValue(
-                                      "upsertConfig.upsertKeyColumns",
+                                      "upsertConfig.comparisonColumns",
                                       current.filter((c) => c !== col.name),
                                       { shouldValidate: true }
                                     );
@@ -334,12 +344,161 @@ export function IngestionStep() {
                           ))}
                         </div>
                       )}
-                      {errors.upsertConfig && (
+                      {errors.upsertConfig?.comparisonColumns?.message && (
                         <p className="mt-1 text-sm text-red-600">
-                          {(errors.upsertConfig as { message?: string })
-                            ?.message}
+                          {errors.upsertConfig.comparisonColumns.message}
                         </p>
                       )}
+                    </div>
+
+                    <div className="space-y-3 border-t border-gray-100 pt-3">
+                      <h4 className="text-sm font-medium text-gray-800">
+                        Advanced (Pinot upsertConfig)
+                      </h4>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">
+                            snapshot
+                          </label>
+                          <select
+                            {...register("upsertConfig.snapshot")}
+                            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 bg-white"
+                          >
+                            <option value="ENABLE">ENABLE</option>
+                            <option value="DISABLE">DISABLE</option>
+                            <option value="DEFAULT">DEFAULT</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">
+                            preload
+                          </label>
+                          <select
+                            {...register("upsertConfig.preload")}
+                            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 bg-white"
+                          >
+                            <option value="ENABLE">ENABLE</option>
+                            <option value="DISABLE">DISABLE</option>
+                            <option value="DEFAULT">DEFAULT</option>
+                          </select>
+                        </div>
+                      </div>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          {...register("upsertConfig.dropOutOfOrderRecord")}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700">
+                          dropOutOfOrderRecord
+                        </span>
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          {...register(
+                            "upsertConfig.enableDeletedKeysCompactionConsistency"
+                          )}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700">
+                          enableDeletedKeysCompactionConsistency
+                        </span>
+                      </label>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          deletedKeysTTL
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          {...register("upsertConfig.deletedKeysTTL", {
+                            valueAsNumber: true,
+                          })}
+                          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          consistencyMode
+                        </label>
+                        <select
+                          {...register("upsertConfig.consistencyMode")}
+                          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 bg-white"
+                        >
+                          <option value="NONE">NONE</option>
+                          <option value="SYNC">SYNC</option>
+                          <option value="SNAPSHOT">SNAPSHOT</option>
+                        </select>
+                        <p className="mt-1 text-xs text-gray-500">
+                          NONE (default), SYNC, or SNAPSHOT — see Pinot upsert
+                          docs.
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          hashFunction
+                        </label>
+                        <select
+                          {...register("upsertConfig.hashFunction")}
+                          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 bg-white"
+                        >
+                          <option value="NONE">NONE</option>
+                          <option value="MD5">MD5</option>
+                          <option value="MURMUR3">MURMUR3</option>
+                          <option value="UUID">UUID</option>
+                          <option value="XXHASH">XXHASH</option>
+                          <option value="XXH128">XXH128</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          defaultPartialUpsertStrategy
+                        </label>
+                        <select
+                          {...register(
+                            "upsertConfig.defaultPartialUpsertStrategy"
+                          )}
+                          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 bg-white"
+                        >
+                          <option value="APPEND">APPEND</option>
+                          <option value="IGNORE">IGNORE</option>
+                          <option value="INCREMENT">INCREMENT</option>
+                          <option value="MAX">MAX</option>
+                          <option value="MIN">MIN</option>
+                          <option value="OVERWRITE">OVERWRITE</option>
+                          <option value="FORCE_OVERWRITE">
+                            FORCE_OVERWRITE
+                          </option>
+                          <option value="UNION">UNION</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2 rounded border border-dashed border-gray-200 p-3">
+                        <p className="text-xs text-gray-500">
+                          Deprecated Pinot fields (still emitted in JSON for
+                          older brokers):
+                        </p>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            {...register("upsertConfig.enableSnapshot")}
+                            className="rounded border-gray-300"
+                          />
+                          <span className="text-sm text-gray-700">
+                            enableSnapshot
+                          </span>
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            {...register("upsertConfig.enablePreload")}
+                            className="rounded border-gray-300"
+                          />
+                          <span className="text-sm text-gray-700">
+                            enablePreload
+                          </span>
+                        </label>
+                      </div>
                     </div>
                   </div>
                 )}

@@ -184,4 +184,50 @@ describe("createIngestionStepSchema", () => {
     });
     expect(r.success).toBe(true);
   });
+
+  it("requires comparisonColumns when upsert is enabled on REALTIME", () => {
+    const schema = createIngestionStepSchema("REALTIME");
+    const r = schema.safeParse({
+      ingestionType: "NONE",
+      enableUpsert: true,
+      upsertConfig: {
+        mode: "FULL",
+        comparisonColumns: [],
+        snapshot: "ENABLE",
+        preload: "ENABLE",
+        dropOutOfOrderRecord: false,
+        enableDeletedKeysCompactionConsistency: false,
+        deletedKeysTTL: 0,
+        consistencyMode: "NONE",
+        hashFunction: "NONE",
+        defaultPartialUpsertStrategy: "OVERWRITE",
+        enableSnapshot: true,
+        enablePreload: true,
+      },
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("accepts upsert when at least one comparison column is set", () => {
+    const schema = createIngestionStepSchema("REALTIME");
+    const r = schema.safeParse({
+      ingestionType: "NONE",
+      enableUpsert: true,
+      upsertConfig: {
+        mode: "FULL",
+        comparisonColumns: ["id"],
+        snapshot: "ENABLE",
+        preload: "ENABLE",
+        dropOutOfOrderRecord: false,
+        enableDeletedKeysCompactionConsistency: false,
+        deletedKeysTTL: 0,
+        consistencyMode: "NONE",
+        hashFunction: "NONE",
+        defaultPartialUpsertStrategy: "OVERWRITE",
+        enableSnapshot: true,
+        enablePreload: true,
+      },
+    });
+    expect(r.success).toBe(true);
+  });
 });
