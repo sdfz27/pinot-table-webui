@@ -2,11 +2,17 @@
 
 export type TableType = "OFFLINE" | "REALTIME";
 
+/** Real-time segment completion; `completionMode` may be `DOWNLOAD` or omitted. */
+export interface CompletionConfig {
+  completionMode?: string;
+}
+
 export interface SegmentsConfig {
   timeColumnName?: string;
   replication: number;
   retentionTimeUnit?: "HOURS" | "DAYS" | "MONTHS" | "YEARS";
   retentionTimeValue?: number;
+  completionConfig?: CompletionConfig;
 }
 
 export interface FieldConfig {
@@ -19,6 +25,18 @@ export interface TableIndexConfig {
   sortedColumn?: string;
   segmentPartitionConfig?: object;
   loadMode?: "HEAP" | "MMAP";
+  noDictionaryColumns?: string[];
+  invertedIndexColumns?: string[];
+  bloomFilterColumns?: string[];
+  rangeIndexColumns?: string[];
+  onHeapDictionaryColumns?: string[];
+  varLengthDictionaryColumns?: string[];
+  jsonIndexColumns?: string[];
+}
+
+export interface TenantsConfig {
+  broker: string;
+  server: string;
 }
 
 export interface BatchIngestionConfig {
@@ -56,6 +74,7 @@ export interface PinotTable {
   tableType: TableType;
   segmentsConfig: SegmentsConfig;
   tableIndexConfig: TableIndexConfig;
+  tenants?: TenantsConfig;
   fieldConfigList?: FieldConfig[];
   ingestionConfig?: {
     batchIngestionConfig?: BatchIngestionConfig;
