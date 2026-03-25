@@ -33,9 +33,20 @@ export interface WizardStateShape {
   replication: number;
   retentionTimeUnit: "DAYS" | "HOURS" | "MONTHS" | "YEARS" | "";
   retentionTimeValue: number;
+  /** Segment completion mode in `segmentsConfig.completionConfig` (BUILD or DOWNLOAD; default DOWNLOAD). */
+  completionMode: "BUILD" | "DOWNLOAD";
   fieldConfigList: FieldConfig[];
   sortedColumn: string;
   loadMode: "HEAP" | "MMAP";
+  noDictionaryColumns: string[];
+  invertedIndexColumns: string[];
+  bloomFilterColumns: string[];
+  rangeIndexColumns: string[];
+  onHeapDictionaryColumns: string[];
+  varLengthDictionaryColumns: string[];
+  jsonIndexColumns: string[];
+  brokerTenant: string;
+  serverTenant: string;
   ingestionType: "NONE" | "BATCH" | "STREAM";
   batchConfig?: BatchIngestionConfig;
   streamConfig?: StreamIngestionConfig;
