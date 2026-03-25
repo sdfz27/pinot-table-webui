@@ -119,4 +119,16 @@ describe("generateTable", () => {
     const table = generateTable(state);
     expect(table.segmentsConfig.completionConfig).toEqual({ completionMode: "BUILD" });
   });
+
+  it("always emits table index column arrays as empty when none selected", () => {
+    const state = offlineWithBatchIngestion();
+    const table = generateTable(state);
+    expect(table.tableIndexConfig.noDictionaryColumns).toEqual([]);
+    expect(table.tableIndexConfig.invertedIndexColumns).toEqual([]);
+    expect(table.tableIndexConfig.bloomFilterColumns).toEqual([]);
+    expect(table.tableIndexConfig.rangeIndexColumns).toEqual([]);
+    expect(table.tableIndexConfig.onHeapDictionaryColumns).toEqual([]);
+    expect(table.tableIndexConfig.varLengthDictionaryColumns).toEqual([]);
+    expect(table.tableIndexConfig.jsonIndexColumns).toEqual([]);
+  });
 });
