@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { generateTable } from "./generateTable";
 import type { WizardStateShape } from "../types/wizard";
+import {
+  DEFAULT_KAFKA_JSON_DECODER,
+  KAFKA_CONSUMER_FACTORY_CLASS,
+} from "./kafkaStreamConfig";
 
 function offlineWithBatchIngestion(): WizardStateShape {
   return {
@@ -84,22 +88,22 @@ describe("generateTable", () => {
       segmentIngestionType: "APPEND",
       segmentIngestionFrequency: "DAILY",
     });
-    expect(table.ingestionConfig?.streamIngestionConfig).toBeUndefined();
   });
 
-  it("REALTIME with STREAM ingestion produces streamIngestionConfig with streamType kafka", () => {
+  it("REALTIME with STREAM ingestion puts stream config under tableIndexConfig.streamConfigs", () => {
     const state = realtimeWithStreamIngestion();
     const table = generateTable(state);
     expect(table.tableType).toBe("REALTIME");
-    expect(table.ingestionConfig).toBeDefined();
-    expect(table.ingestionConfig?.streamIngestionConfig).toBeDefined();
-    expect(table.ingestionConfig?.streamIngestionConfig?.streamType).toBe("kafka");
-    expect(table.ingestionConfig?.streamIngestionConfig).toEqual({
+    expect(table.ingestionConfig).toBeUndefined();
+    expect(table.tableIndexConfig.streamConfigs).toEqual({
       streamType: "kafka",
-      topicName: "events-topic",
-      bootstrapServers: "broker1:9092",
+      "stream.kafka.topic.name": "events-topic",
+      "stream.kafka.broker.list": "broker1:9092",
+      "stream.kafka.consumer.factory.class.name": KAFKA_CONSUMER_FACTORY_CLASS,
+      "stream.kafka.consume.type": "lowlevel",
+      "stream.kafka.consumer.prop.auto.offset.reset": "smallest",
+      "stream.kafka.decoder.class.name": DEFAULT_KAFKA_JSON_DECODER,
     });
-    expect(table.ingestionConfig?.batchIngestionConfig).toBeUndefined();
   });
 
   it("emits completionConfig, table index column lists, and tenants when set", () => {

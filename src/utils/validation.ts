@@ -192,6 +192,24 @@ export function createIngestionStepSchema(
         .object({
           topicName: z.string().optional(),
           bootstrapServers: z.string().optional(),
+          consumeType: z.enum(["lowlevel", "highlevel"]).optional(),
+          autoOffsetReset: z.enum(["smallest", "largest"]).optional(),
+          saslMechanism: z.string().optional(),
+          securityProtocol: z.string().optional(),
+          saslJaasConfig: z.string().optional(),
+          decoderClassName: z.string().optional(),
+          segmentFlushRows: z.string().optional(),
+          segmentFlushSize: z.string().optional(),
+          segmentFlushTime: z.string().optional(),
+          segmentFlushInitialRows: z.string().optional(),
+          consumerExtraPairs: z
+            .array(
+              z.object({
+                key: z.string(),
+                value: z.string(),
+              })
+            )
+            .optional(),
         })
         .optional(),
       batchConfig: z.object({}).passthrough().optional(),
