@@ -343,7 +343,7 @@ export function IngestionStep() {
                     Consumer level
                   </label>
                   <p className="mt-0.5 text-xs text-gray-500">
-                    <code className="text-xs">stream.kafka.consume.type</code> — default lowlevel
+                    <code className="text-xs">stream.kafka.consumer.type</code> — default lowlevel
                   </p>
                   <select
                     {...register("streamConfig.consumeType")}
@@ -500,9 +500,8 @@ export function IngestionStep() {
                   Additional Kafka consumer properties
                 </h4>
                 <p className="text-xs text-gray-500">
-                  Keys are Kafka client property names (e.g. <code className="text-xs">max.poll.records</code>); each is emitted under{" "}
-                  <code className="text-xs">stream.kafka.consumer.prop.&lt;key&gt;</code> unless you enter a full{" "}
-                  <code className="text-xs">stream.*</code> key.
+                  Property names and values are copied into the table JSON as you enter them (e.g.{" "}
+                  <code className="text-xs">max.poll.records</code>).
                 </p>
                 {consumerExtraFields.map((field, index) => (
                   <div key={field.id} className="flex flex-col gap-2 sm:flex-row sm:items-end">

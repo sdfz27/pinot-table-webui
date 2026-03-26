@@ -100,7 +100,7 @@ describe("generateTable", () => {
       "stream.kafka.topic.name": "events-topic",
       "stream.kafka.broker.list": "broker1:9092",
       "stream.kafka.consumer.factory.class.name": KAFKA_CONSUMER_FACTORY_CLASS,
-      "stream.kafka.consume.type": "lowlevel",
+      "stream.kafka.consumer.type": "lowlevel",
       "stream.kafka.consumer.prop.auto.offset.reset": "smallest",
       "stream.kafka.decoder.class.name": DEFAULT_KAFKA_JSON_DECODER,
     });

@@ -51,27 +51,27 @@ export interface StreamIngestionConfig {
   streamType: "kafka";
   topicName: string;
   bootstrapServers: string;
-  /** Pinot `stream.kafka.consume.type` — default lowlevel. */
+  /** Pinot `stream.kafka.consumer.type` — default lowlevel. */
   consumeType?: "lowlevel" | "highlevel";
   /** Pinot `stream.kafka.consumer.prop.auto.offset.reset` — default smallest. */
   autoOffsetReset?: "smallest" | "largest";
-  /** Kafka `sasl.mechanism` (emitted under `stream.kafka.consumer.prop.*`). */
+  /** Kafka `sasl.mechanism` (bare key in stream map). */
   saslMechanism?: string;
-  /** Kafka `security.protocol` (e.g. PLAINTEXT, SSL, SASL_SSL). */
+  /** Kafka `security.protocol` (bare key in stream map). */
   securityProtocol?: string;
-  /** Kafka `sasl.jaas.config` — full JAAS line from user input. */
+  /** Kafka `sasl.jaas.config` (bare key in stream map). */
   saslJaasConfig?: string;
   /** Pinot `stream.kafka.decoder.class.name`. */
   decoderClassName?: string;
   /** `realtime.segment.flush.threshold.rows` */
   segmentFlushRows?: string;
-  /** `realtime.segment.flush.threshold.segment.size` */
+  /** `realtime.segment.flush.threshold.size` */
   segmentFlushSize?: string;
   /** `realtime.segment.flush.threshold.time` */
   segmentFlushTime?: string;
-  /** `realtime.segment.flush.threshold.initial.rows` */
+  /** `realtime.segment.flush.threshold.autotune.initialRows` */
   segmentFlushInitialRows?: string;
-  /** Additional Kafka consumer properties; keys are Kafka names (e.g. `sasl.mechanism`) or full `stream.*` keys. */
+  /** Additional properties; keys emitted as-is in the stream map. */
   consumerExtraProps?: Record<string, string>;
 }
 
