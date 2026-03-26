@@ -32,6 +32,8 @@ export interface TableIndexConfig {
   onHeapDictionaryColumns?: string[];
   varLengthDictionaryColumns?: string[];
   jsonIndexColumns?: string[];
+  /** Flat Pinot stream config map (`stream.kafka.*`, flush thresholds, etc.). */
+  streamConfigs?: Record<string, string>;
 }
 
 export interface TenantsConfig {
@@ -44,7 +46,7 @@ export interface BatchIngestionConfig {
   segmentIngestionFrequency: "HOURLY" | "DAILY" | "WEEKLY" | "MONTHLY";
 }
 
-/** Wizard / state shape for Kafka stream ingestion (flattened into `streamConfigMaps` in JSON). */
+/** Wizard / state shape for Kafka stream ingestion (flattened into `tableIndexConfig.streamConfigs` in JSON). */
 export interface StreamIngestionConfig {
   streamType: "kafka";
   topicName: string;
@@ -71,11 +73,6 @@ export interface StreamIngestionConfig {
   segmentFlushInitialRows?: string;
   /** Additional Kafka consumer properties; keys are Kafka names (e.g. `sasl.mechanism`) or full `stream.*` keys. */
   consumerExtraProps?: Record<string, string>;
-}
-
-/** Pinot table JSON under `ingestionConfig.streamIngestionConfig`. */
-export interface StreamIngestionConfigOutput {
-  streamConfigMaps: Record<string, string>[];
 }
 
 /** Matches `org.apache.pinot.spi.utils.Enablement` JSON. */
@@ -151,7 +148,6 @@ export interface PinotTable {
   fieldConfigList?: FieldConfig[];
   ingestionConfig?: {
     batchIngestionConfig?: BatchIngestionConfig;
-    streamIngestionConfig?: StreamIngestionConfigOutput;
   };
   upsertConfig?: UpsertConfig;
   dedupConfig?: DedupConfig;

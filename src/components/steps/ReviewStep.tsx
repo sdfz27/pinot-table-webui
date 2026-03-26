@@ -23,7 +23,7 @@ export function ReviewStep() {
   return (
     <div className="space-y-4">
       <StepIndicator currentStep={currentStep} />
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto min-w-0 space-y-6">
         <div className="rounded-lg bg-white p-6 shadow-md">
           <h2 className="mb-4 text-lg font-semibold">Review & Export</h2>
           <div className="space-y-6">
@@ -34,7 +34,7 @@ export function ReviewStep() {
                 variant="schema"
                 label="Schema JSON"
               />
-              <div className="mt-2 rounded border border-gray-200 p-3">
+              <div className="mt-2 min-w-0 max-w-full overflow-hidden rounded border border-gray-200 p-3">
                 <JsonPreview obj={schemaJson} />
               </div>
             </div>
@@ -45,7 +45,7 @@ export function ReviewStep() {
                 variant="table"
                 label="Table JSON"
               />
-              <div className="mt-2 rounded border border-gray-200 p-3">
+              <div className="mt-2 min-w-0 max-w-full overflow-hidden rounded border border-gray-200 p-3">
                 <JsonPreview obj={tableJson} />
               </div>
             </div>

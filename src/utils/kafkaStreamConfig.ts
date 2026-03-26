@@ -1,6 +1,6 @@
 import type { StreamIngestionConfig } from "../types/pinotTable";
 
-/** Always emitted in streamConfigMaps. */
+/** Always emitted in `tableIndexConfig.streamConfigs`. */
 export const KAFKA_CONSUMER_FACTORY_CLASS =
   "org.apache.pinot.plugin.stream.kafka20.KafkaConsumerFactory";
 
@@ -28,7 +28,8 @@ function consumerPropKey(userKey: string): string {
 }
 
 /**
- * Builds one Pinot `streamConfigMaps` entry with flat `stream.kafka.*` keys.
+ * Builds the flat Pinot stream map for `tableIndexConfig.streamConfigs`
+ * (`stream.kafka.*` keys, flush thresholds, etc.).
  */
 export function buildKafkaStreamConfigMap(
   config: StreamIngestionConfig

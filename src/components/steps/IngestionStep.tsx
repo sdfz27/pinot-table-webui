@@ -301,8 +301,8 @@ export function IngestionStep() {
             <div className="rounded border border-gray-200 p-4 space-y-4">
               <h3 className="font-medium">Stream Config (Kafka)</h3>
               <p className="text-xs text-gray-500">
-                Table JSON uses{" "}
-                <code className="text-xs">ingestionConfig.streamIngestionConfig.streamConfigMaps</code>{" "}
+                Table JSON places stream settings under{" "}
+                <code className="text-xs break-all">tableIndexConfig.streamConfigs</code>{" "}
                 with Pinot keys such as{" "}
                 <code className="text-xs">stream.kafka.topic.name</code> and{" "}
                 <code className="text-xs">stream.kafka.broker.list</code>. The consumer factory{" "}
