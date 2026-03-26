@@ -4,7 +4,6 @@ import { z } from "zod";
 import { createIngestionStepSchema } from "../../utils/validation";
 import {
   DEFAULT_KAFKA_JSON_DECODER,
-  KAFKA_CONSUMER_FACTORY_CLASS,
   PINOT_KAFKA_DECODER_CLASSES,
 } from "../../utils/kafkaStreamConfig";
 import { useWizardStore } from "../../store/wizardStore";
@@ -300,14 +299,6 @@ export function IngestionStep() {
           {selectedIngestionType === "STREAM" && canSelectStream && (
             <div className="rounded border border-gray-200 p-4 space-y-4">
               <h3 className="font-medium">Stream Config (Kafka)</h3>
-              <p className="text-xs text-gray-500">
-                Table JSON places stream settings under{" "}
-                <code className="text-xs break-all">tableIndexConfig.streamConfigs</code>{" "}
-                with Pinot keys such as{" "}
-                <code className="text-xs">stream.kafka.topic.name</code> and{" "}
-                <code className="text-xs">stream.kafka.broker.list</code>. The consumer factory{" "}
-                <code className="text-xs break-all">{KAFKA_CONSUMER_FACTORY_CLASS}</code> is always included.
-              </p>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Topic name
