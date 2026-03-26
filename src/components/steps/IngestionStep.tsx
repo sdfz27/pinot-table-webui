@@ -4,7 +4,6 @@ import { z } from "zod";
 import { createIngestionStepSchema } from "../../utils/validation";
 import {
   DEFAULT_KAFKA_JSON_DECODER,
-  KAFKA_CONSUMER_FACTORY_CLASS,
   PINOT_KAFKA_DECODER_CLASSES,
 } from "../../utils/kafkaStreamConfig";
 import { useWizardStore } from "../../store/wizardStore";
@@ -300,14 +299,6 @@ export function IngestionStep() {
           {selectedIngestionType === "STREAM" && canSelectStream && (
             <div className="rounded border border-gray-200 p-4 space-y-4">
               <h3 className="font-medium">Stream Config (Kafka)</h3>
-              <p className="text-xs text-gray-500">
-                Table JSON places stream settings under{" "}
-                <code className="text-xs break-all">tableIndexConfig.streamConfigs</code>{" "}
-                with Pinot keys such as{" "}
-                <code className="text-xs">stream.kafka.topic.name</code> and{" "}
-                <code className="text-xs">stream.kafka.broker.list</code>. The consumer factory{" "}
-                <code className="text-xs break-all">{KAFKA_CONSUMER_FACTORY_CLASS}</code> is always included.
-              </p>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Topic name
@@ -352,7 +343,7 @@ export function IngestionStep() {
                     Consumer level
                   </label>
                   <p className="mt-0.5 text-xs text-gray-500">
-                    <code className="text-xs">stream.kafka.consume.type</code> — default lowlevel
+                    <code className="text-xs">stream.kafka.consumer.type</code> — default lowlevel
                   </p>
                   <select
                     {...register("streamConfig.consumeType")}
@@ -509,9 +500,8 @@ export function IngestionStep() {
                   Additional Kafka consumer properties
                 </h4>
                 <p className="text-xs text-gray-500">
-                  Keys are Kafka client property names (e.g. <code className="text-xs">max.poll.records</code>); each is emitted under{" "}
-                  <code className="text-xs">stream.kafka.consumer.prop.&lt;key&gt;</code> unless you enter a full{" "}
-                  <code className="text-xs">stream.*</code> key.
+                  Property names and values are copied into the table JSON as you enter them (e.g.{" "}
+                  <code className="text-xs">max.poll.records</code>).
                 </p>
                 {consumerExtraFields.map((field, index) => (
                   <div key={field.id} className="flex flex-col gap-2 sm:flex-row sm:items-end">
