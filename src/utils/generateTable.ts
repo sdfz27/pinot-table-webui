@@ -4,6 +4,7 @@ import type {
   TableIndexConfig,
 } from "../types/pinotTable";
 import type { WizardStateShape } from "../types/wizard";
+import { buildKafkaStreamConfigMap } from "./kafkaStreamConfig";
 
 function filterKnownColumns(names: string[], valid: Set<string>): string[] {
   return names.filter((n) => n && valid.has(n));
@@ -77,7 +78,9 @@ export function generateTable(state: WizardStateShape): PinotTable {
   if (state.tableType === "REALTIME" && state.ingestionType === "STREAM" && state.streamConfig) {
     table.ingestionConfig = {
       ...table.ingestionConfig,
-      streamIngestionConfig: state.streamConfig,
+      streamIngestionConfig: {
+        streamConfigMaps: [buildKafkaStreamConfigMap(state.streamConfig)],
+      },
     };
   }
 

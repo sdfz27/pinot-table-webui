@@ -44,20 +44,38 @@ export interface BatchIngestionConfig {
   segmentIngestionFrequency: "HOURLY" | "DAILY" | "WEEKLY" | "MONTHLY";
 }
 
+/** Wizard / state shape for Kafka stream ingestion (flattened into `streamConfigMaps` in JSON). */
 export interface StreamIngestionConfig {
   streamType: "kafka";
   topicName: string;
   bootstrapServers: string;
-  authenticationType?: "NONE" | "SASL" | "SSL";
-  authenticationConfig?: {
-    saslMechanism?: "PLAIN" | "SCRAM-SHA-256" | "SCRAM-SHA-512";
-    saslUsername?: string;
-    saslPassword?: string;
-    sslTruststorePath?: string;
-    sslKeystorePath?: string;
-    sslKeystorePassword?: string;
-  };
-  consumerProperties?: Record<string, string>;
+  /** Pinot `stream.kafka.consume.type` — default lowlevel. */
+  consumeType?: "lowlevel" | "highlevel";
+  /** Pinot `stream.kafka.consumer.prop.auto.offset.reset` — default smallest. */
+  autoOffsetReset?: "smallest" | "largest";
+  /** Kafka `sasl.mechanism` (emitted under `stream.kafka.consumer.prop.*`). */
+  saslMechanism?: string;
+  /** Kafka `security.protocol` (e.g. PLAINTEXT, SSL, SASL_SSL). */
+  securityProtocol?: string;
+  /** Kafka `sasl.jaas.config` — full JAAS line from user input. */
+  saslJaasConfig?: string;
+  /** Pinot `stream.kafka.decoder.class.name`. */
+  decoderClassName?: string;
+  /** `realtime.segment.flush.threshold.rows` */
+  segmentFlushRows?: string;
+  /** `realtime.segment.flush.threshold.segment.size` */
+  segmentFlushSize?: string;
+  /** `realtime.segment.flush.threshold.time` */
+  segmentFlushTime?: string;
+  /** `realtime.segment.flush.threshold.initial.rows` */
+  segmentFlushInitialRows?: string;
+  /** Additional Kafka consumer properties; keys are Kafka names (e.g. `sasl.mechanism`) or full `stream.*` keys. */
+  consumerExtraProps?: Record<string, string>;
+}
+
+/** Pinot table JSON under `ingestionConfig.streamIngestionConfig`. */
+export interface StreamIngestionConfigOutput {
+  streamConfigMaps: Record<string, string>[];
 }
 
 /** Matches `org.apache.pinot.spi.utils.Enablement` JSON. */
@@ -133,7 +151,7 @@ export interface PinotTable {
   fieldConfigList?: FieldConfig[];
   ingestionConfig?: {
     batchIngestionConfig?: BatchIngestionConfig;
-    streamIngestionConfig?: StreamIngestionConfig;
+    streamIngestionConfig?: StreamIngestionConfigOutput;
   };
   upsertConfig?: UpsertConfig;
   dedupConfig?: DedupConfig;

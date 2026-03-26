@@ -1,7 +1,12 @@
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { createIngestionStepSchema } from "../../utils/validation";
+import {
+  DEFAULT_KAFKA_JSON_DECODER,
+  KAFKA_CONSUMER_FACTORY_CLASS,
+  PINOT_KAFKA_DECODER_CLASSES,
+} from "../../utils/kafkaStreamConfig";
 import { useWizardStore } from "../../store/wizardStore";
 import { StepIndicator } from "../wizard/StepIndicator";
 import { NavigationButtons } from "../wizard/NavigationButtons";
@@ -12,6 +17,47 @@ import {
   type StreamIngestionConfig,
   type UpsertConfig,
 } from "../../types/pinotTable";
+
+function extraPropsToPairs(
+  props?: Record<string, string>
+): { key: string; value: string }[] {
+  if (!props || Object.keys(props).length === 0) return [];
+  return Object.entries(props).map(([key, value]) => ({ key, value }));
+}
+
+function streamConfigFormDefaults(
+  sc?: StreamIngestionConfig
+): {
+  topicName: string;
+  bootstrapServers: string;
+  consumeType: "lowlevel" | "highlevel";
+  autoOffsetReset: "smallest" | "largest";
+  saslMechanism: string;
+  securityProtocol: string;
+  saslJaasConfig: string;
+  decoderClassName: string;
+  segmentFlushRows: string;
+  segmentFlushSize: string;
+  segmentFlushTime: string;
+  segmentFlushInitialRows: string;
+  consumerExtraPairs: { key: string; value: string }[];
+} {
+  return {
+    topicName: sc?.topicName ?? "",
+    bootstrapServers: sc?.bootstrapServers ?? "",
+    consumeType: sc?.consumeType ?? "lowlevel",
+    autoOffsetReset: sc?.autoOffsetReset ?? "smallest",
+    saslMechanism: sc?.saslMechanism ?? "",
+    securityProtocol: sc?.securityProtocol ?? "",
+    saslJaasConfig: sc?.saslJaasConfig ?? "",
+    decoderClassName: sc?.decoderClassName ?? DEFAULT_KAFKA_JSON_DECODER,
+    segmentFlushRows: sc?.segmentFlushRows ?? "",
+    segmentFlushSize: sc?.segmentFlushSize ?? "",
+    segmentFlushTime: sc?.segmentFlushTime ?? "",
+    segmentFlushInitialRows: sc?.segmentFlushInitialRows ?? "",
+    consumerExtraPairs: extraPropsToPairs(sc?.consumerExtraProps),
+  };
+}
 
 function upsertConfigForForm(existing?: UpsertConfig): UpsertConfig {
   const d = createDefaultUpsertConfig();
@@ -65,17 +111,13 @@ export function IngestionStep() {
     handleSubmit,
     watch,
     setValue,
+    control,
     formState: { errors },
   } = useForm<IngestionFormData>({
     resolver: zodResolver(ingestionSchema),
     defaultValues: {
       ingestionType,
-      streamConfig: streamConfig
-        ? {
-            topicName: streamConfig.topicName || "",
-            bootstrapServers: streamConfig.bootstrapServers || "",
-          }
-        : { topicName: "", bootstrapServers: "" },
+      streamConfig: streamConfigFormDefaults(streamConfig),
       batchConfig: batchConfig || {
         segmentIngestionType: "APPEND",
         segmentIngestionFrequency: "DAILY",
@@ -83,6 +125,12 @@ export function IngestionStep() {
       ...defaultRealtime,
     },
   });
+
+  const { fields: consumerExtraFields, append: appendConsumerExtra, remove: removeConsumerExtra } =
+    useFieldArray({
+      control,
+      name: "streamConfig.consumerExtraPairs",
+    });
 
   const selectedIngestionType = watch("ingestionType");
   const watchedEnableUpsert = watch("enableUpsert");
@@ -101,10 +149,31 @@ export function IngestionStep() {
       };
       updates.streamConfig = undefined;
     } else if (data.ingestionType === "STREAM" && data.streamConfig) {
+      const sc = data.streamConfig;
+      const consumerExtraProps: Record<string, string> = {};
+      for (const p of sc.consumerExtraPairs ?? []) {
+        const k = p.key?.trim();
+        if (k) consumerExtraProps[k] = p.value ?? "";
+      }
       updates.streamConfig = {
         streamType: "kafka",
-        topicName: data.streamConfig.topicName!.trim(),
-        bootstrapServers: data.streamConfig.bootstrapServers!.trim(),
+        topicName: sc.topicName!.trim(),
+        bootstrapServers: sc.bootstrapServers!.trim(),
+        consumeType: sc.consumeType ?? "lowlevel",
+        autoOffsetReset: sc.autoOffsetReset ?? "smallest",
+        saslMechanism: sc.saslMechanism?.trim() || undefined,
+        securityProtocol: sc.securityProtocol?.trim() || undefined,
+        saslJaasConfig: sc.saslJaasConfig?.trim() || undefined,
+        decoderClassName:
+          sc.decoderClassName?.trim() || DEFAULT_KAFKA_JSON_DECODER,
+        segmentFlushRows: sc.segmentFlushRows?.trim() || undefined,
+        segmentFlushSize: sc.segmentFlushSize?.trim() || undefined,
+        segmentFlushTime: sc.segmentFlushTime?.trim() || undefined,
+        segmentFlushInitialRows: sc.segmentFlushInitialRows?.trim() || undefined,
+        consumerExtraProps:
+          Object.keys(consumerExtraProps).length > 0
+            ? consumerExtraProps
+            : undefined,
       } as StreamIngestionConfig;
       updates.batchConfig = undefined;
     } else {
@@ -231,10 +300,21 @@ export function IngestionStep() {
           {selectedIngestionType === "STREAM" && canSelectStream && (
             <div className="rounded border border-gray-200 p-4 space-y-4">
               <h3 className="font-medium">Stream Config (Kafka)</h3>
+              <p className="text-xs text-gray-500">
+                Table JSON uses{" "}
+                <code className="text-xs">ingestionConfig.streamIngestionConfig.streamConfigMaps</code>{" "}
+                with Pinot keys such as{" "}
+                <code className="text-xs">stream.kafka.topic.name</code> and{" "}
+                <code className="text-xs">stream.kafka.broker.list</code>. The consumer factory{" "}
+                <code className="text-xs break-all">{KAFKA_CONSUMER_FACTORY_CLASS}</code> is always included.
+              </p>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Topic Name
+                  Topic name
                 </label>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Emitted as <code className="text-xs">stream.kafka.topic.name</code>
+                </p>
                 <input
                   type="text"
                   {...register("streamConfig.topicName")}
@@ -249,8 +329,11 @@ export function IngestionStep() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Bootstrap Servers
+                  Broker list
                 </label>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Emitted as <code className="text-xs">stream.kafka.broker.list</code>
+                </p>
                 <input
                   type="text"
                   {...register("streamConfig.bootstrapServers")}
@@ -262,6 +345,209 @@ export function IngestionStep() {
                     {errors.streamConfig.bootstrapServers.message}
                   </p>
                 )}
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Consumer level
+                  </label>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    <code className="text-xs">stream.kafka.consume.type</code> — default lowlevel
+                  </p>
+                  <select
+                    {...register("streamConfig.consumeType")}
+                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 bg-white"
+                  >
+                    <option value="lowlevel">lowlevel</option>
+                    <option value="highlevel">highlevel</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Auto offset reset
+                  </label>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    <code className="text-xs">stream.kafka.consumer.prop.auto.offset.reset</code> — default smallest
+                  </p>
+                  <select
+                    {...register("streamConfig.autoOffsetReset")}
+                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 bg-white"
+                  >
+                    <option value="smallest">smallest</option>
+                    <option value="largest">largest</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    SASL mechanism
+                  </label>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    Kafka <code className="text-xs">sasl.mechanism</code> (see Kafka / Pinot docs)
+                  </p>
+                  <input
+                    type="text"
+                    {...register("streamConfig.saslMechanism")}
+                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+                    placeholder="e.g. PLAIN, SCRAM-SHA-256"
+                    list="sasl-mechanism-suggestions"
+                  />
+                  <datalist id="sasl-mechanism-suggestions">
+                    <option value="PLAIN" />
+                    <option value="SCRAM-SHA-256" />
+                    <option value="SCRAM-SHA-512" />
+                    <option value="GSSAPI" />
+                    <option value="OAUTHBEARER" />
+                  </datalist>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Security protocol
+                  </label>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    Kafka <code className="text-xs">security.protocol</code>
+                  </p>
+                  <input
+                    type="text"
+                    {...register("streamConfig.securityProtocol")}
+                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+                    placeholder="e.g. SASL_SSL, PLAINTEXT"
+                    list="security-protocol-suggestions"
+                  />
+                  <datalist id="security-protocol-suggestions">
+                    <option value="PLAINTEXT" />
+                    <option value="SSL" />
+                    <option value="SASL_PLAINTEXT" />
+                    <option value="SASL_SSL" />
+                  </datalist>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  SASL JAAS config
+                </label>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Kafka <code className="text-xs">sasl.jaas.config</code> — paste the full JAAS line
+                </p>
+                <textarea
+                  {...register("streamConfig.saslJaasConfig")}
+                  rows={3}
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm"
+                  placeholder='e.g. org.apache.kafka.common.security.plain.PlainLoginModule required username="..." password="...";'
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Decoder class name
+                </label>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  <code className="text-xs">stream.kafka.decoder.class.name</code> — pick a built-in class or type a custom one
+                </p>
+                <input
+                  type="text"
+                  {...register("streamConfig.decoderClassName")}
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-xs"
+                  list="pinot-kafka-decoders"
+                  placeholder={DEFAULT_KAFKA_JSON_DECODER}
+                />
+                <datalist id="pinot-kafka-decoders">
+                  {PINOT_KAFKA_DECODER_CLASSES.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              </div>
+              <div className="rounded border border-dashed border-gray-200 p-3 space-y-3">
+                <h4 className="text-sm font-medium text-gray-800">
+                  Segment flush thresholds
+                </h4>
+                <p className="text-xs text-gray-500">
+                  Optional. See Pinot real-time ingestion docs for{" "}
+                  <code className="text-xs">realtime.segment.flush.threshold.*</code>.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700">rows</label>
+                    <input
+                      type="text"
+                      {...register("streamConfig.segmentFlushRows")}
+                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                      placeholder="e.g. 500000"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700">segment size</label>
+                    <input
+                      type="text"
+                      {...register("streamConfig.segmentFlushSize")}
+                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                      placeholder="e.g. 200M"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700">time</label>
+                    <input
+                      type="text"
+                      {...register("streamConfig.segmentFlushTime")}
+                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                      placeholder="e.g. 12h"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700">initial rows</label>
+                    <input
+                      type="text"
+                      {...register("streamConfig.segmentFlushInitialRows")}
+                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                      placeholder="e.g. 100000"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="rounded border border-dashed border-gray-200 p-3 space-y-3">
+                <h4 className="text-sm font-medium text-gray-800">
+                  Additional Kafka consumer properties
+                </h4>
+                <p className="text-xs text-gray-500">
+                  Keys are Kafka client property names (e.g. <code className="text-xs">max.poll.records</code>); each is emitted under{" "}
+                  <code className="text-xs">stream.kafka.consumer.prop.&lt;key&gt;</code> unless you enter a full{" "}
+                  <code className="text-xs">stream.*</code> key.
+                </p>
+                {consumerExtraFields.map((field, index) => (
+                  <div key={field.id} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-700">Property name</label>
+                      <input
+                        type="text"
+                        {...register(`streamConfig.consumerExtraPairs.${index}.key` as const)}
+                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm"
+                        placeholder="e.g. max.poll.interval.ms"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-700">Value</label>
+                      <input
+                        type="text"
+                        {...register(`streamConfig.consumerExtraPairs.${index}.value` as const)}
+                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeConsumerExtra(index)}
+                      className="rounded border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => appendConsumerExtra({ key: "", value: "" })}
+                  className="rounded border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Add consumer property
+                </button>
               </div>
             </div>
           )}
